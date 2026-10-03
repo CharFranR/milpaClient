@@ -1,69 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/core/api_exception.dart';
-import 'package:flutter_application_1/core/models/auth_models.dart';
-import 'package:flutter_application_1/core/token_store.dart';
-import 'package:flutter_application_1/features/auth/auth_gate.dart';
-import 'package:flutter_application_1/features/auth/auth_repository.dart';
 import 'package:flutter_application_1/layout/buyer.dart';
 import 'package:flutter_application_1/login.dart';
+import 'package:flutter_application_1/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class FakeAuthRepository extends AuthRepository {
-  FakeAuthRepository({this.session, this.loginError})
-    : super(apiClient: ApiClient(), tokenStore: TokenStore());
+import '../../helpers/fake_auth_repository.dart';
 
-  final ({String token, String userId})? session;
-  final Object? loginError;
+Future<void> pumpMainApp(WidgetTester tester, FakeAuthRepository fake) async {
+  tester.platformDispatcher.textScaleFactorTestValue = 0.8;
+  addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-  @override
-  Future<({String token, String userId})?> restoreSession() async => session;
-
-  @override
-  Future<User> login({required String email, required String password}) async {
-    if (loginError != null) throw loginError!;
-    return const User(
-      id: 'user-1',
-      email: 'a@b.co',
-      firstName: 'Flutter',
-      lastName: 'Test',
-      phoneNumber: '+50588887777',
-      role: 2,
-    );
-  }
-
-  @override
-  Future<User> register({
-    required String email,
-    required String firstName,
-    required String lastName,
-    required String phoneNumber,
-    required int role,
-    required String password,
-    required String confirmPassword,
-    String address = '',
-    String department = '',
-    String municipality = '',
-  }) async => throw UnimplementedError();
-
-  @override
-  Future<void> logout() async {}
-}
-
-Future<void> pumpAuthGate(
-  WidgetTester tester,
-  AuthRepository authRepository,
-) async {
-  await tester.pumpWidget(
-    MaterialApp(
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context)
-            .copyWith(textScaler: const TextScaler.linear(0.8)),
-        child: child!,
-      ),
-      home: AuthGate(authRepository: authRepository),
-    ),
-  );
+  await tester.pumpWidget(MainApp(authRepository: fake));
   await tester.pumpAndSettle();
 }
 
@@ -72,7 +20,7 @@ void main() {
     tester,
   ) async {
     final fake = FakeAuthRepository();
-    await pumpAuthGate(tester, fake);
+    await pumpMainApp(tester, fake);
 
     expect(find.byType(LoginPage), findsOneWidget);
     expect(find.byType(BuyerLayout), findsNothing);
@@ -82,7 +30,7 @@ void main() {
     final fake = FakeAuthRepository(
       session: (token: 'token-1', userId: 'user-1'),
     );
-    await pumpAuthGate(tester, fake);
+    await pumpMainApp(tester, fake);
 
     expect(find.byType(BuyerLayout), findsOneWidget);
     expect(find.byType(LoginPage), findsNothing);
@@ -90,7 +38,7 @@ void main() {
 
   testWidgets('successful login shows BuyerLayout', (tester) async {
     final fake = FakeAuthRepository();
-    await pumpAuthGate(tester, fake);
+    await pumpMainApp(tester, fake);
 
     expect(find.byType(LoginPage), findsOneWidget);
 
@@ -99,6 +47,7 @@ void main() {
     await tester.tap(find.text('Iniciar sesión'));
     await tester.pumpAndSettle();
 
+    expect(fake.loginCalls, 1);
     expect(find.byType(BuyerLayout), findsOneWidget);
     expect(find.byType(LoginPage), findsNothing);
   });
@@ -109,7 +58,7 @@ void main() {
     final fake = FakeAuthRepository(
       loginError: ApiException(401, 'unauthorized'),
     );
-    await pumpAuthGate(tester, fake);
+    await pumpMainApp(tester, fake);
 
     await tester.enterText(find.byType(TextField).at(0), 'a@b.co');
     await tester.enterText(find.byType(TextField).at(1), 'Password123');

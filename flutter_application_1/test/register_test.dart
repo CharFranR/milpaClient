@@ -1,29 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:flutter_application_1/core/api_exception.dart';
 import 'package:flutter_application_1/features/auth/register_models.dart';
-import 'package:flutter_application_1/features/auth/register_repository.dart';
 import 'package:flutter_application_1/features/auth/register_view.dart';
+import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/ui/labeled_field.dart';
 
-/// Repository en memoria: captura el request y no espera nada.
-class _RecordingRepository implements RegisterRepository {
-  _RecordingRepository({this.shouldFail = false});
+import 'helpers/fake_auth_repository.dart';
 
-  final bool shouldFail;
-  RegisterUserRequest? received;
-
-  @override
-  Future<void> register(RegisterUserRequest request) async {
-    received = request;
-    if (shouldFail) {
-      throw StateError('fallo simulado');
-    }
-  }
-}
-
-/// El label vive fuera del TextFormField, así que se busca el campo como
-/// descendiente del LabeledField que contiene ese label.
 Finder fieldWithLabel(String label) {
   return find.descendant(
     of: find.ancestor(
@@ -39,18 +24,23 @@ Finder get submitButton => find.widgetWithText(TextButton, 'Crear cuenta');
 bool submitEnabled(WidgetTester tester) =>
     tester.widget<TextButton>(submitButton).onPressed != null;
 
+Future<void> pumpRegister(WidgetTester tester, FakeAuthRepository fake) async {
+  await tester.pumpWidget(
+    SessionScope(
+      controller: SessionController(authRepository: fake),
+      child: const MaterialApp(home: RegisterView()),
+    ),
+  );
+  await tester.pump();
+}
+
 Future<void> tapSubmit(WidgetTester tester) async {
   await tester.ensureVisible(submitButton);
   await tester.tap(submitButton);
   await tester.pump();
 }
 
-Future<void> fillHappyPath(
-  WidgetTester tester, {
-  String role = 'Comprador',
-}) async {
-  await tester.tap(find.text(role));
-  await tester.pump();
+Future<void> fillForm(WidgetTester tester) async {
   await tester.enterText(fieldWithLabel('Nombre'), '  Juan  ');
   await tester.enterText(fieldWithLabel('Apellido'), 'Pérez');
   await tester.enterText(
@@ -63,113 +53,29 @@ Future<void> fillHappyPath(
   await tester.pump();
 }
 
+Future<void> fillHappyPath(
+  WidgetTester tester, {
+  String role = 'Comprador',
+}) async {
+  await tester.tap(find.text(role));
+  await tester.pump();
+  await fillForm(tester);
+}
+
 void main() {
-  group('RegisterUserRequest.toJson', () {
-    const RegisterUserRequest full = RegisterUserRequest(
-      email: 'juan@milpa.com',
-      firstName: 'Juan',
-      lastName: 'Pérez',
-      role: RegisterRole.producer,
-      address: 'Barrio Centro',
-      department: 'Masaya',
-      municipality: 'Masate',
-      phoneNumber: '88881234',
-      password: 'secreta123',
-      confirmPassword: 'secreta123',
-    );
-
-    test('manda todos los campos y el role como entero', () {
-      expect(full.toJson(), <String, dynamic>{
-        'email': 'juan@milpa.com',
-        'first_name': 'Juan',
-        'last_name': 'Pérez',
-        'role': 2,
-        'password': 'secreta123',
-        'confirm_password': 'secreta123',
-        'phone_number': '88881234',
-        'address': 'Barrio Centro',
-        'department': 'Masaya',
-        'municipality': 'Masate',
-      });
-    });
-
-    test('omite los campos opcionales vacíos y nunca manda coordenadas', () {
-      const RegisterUserRequest minimal = RegisterUserRequest(
-        email: 'juan@milpa.com',
-        firstName: 'Juan',
-        lastName: 'Pérez',
-        role: RegisterRole.buyer,
-        phoneNumber: '88881234',
-        password: 'secreta123',
-        confirmPassword: 'secreta123',
-      );
-
-      expect(minimal.toJson(), <String, dynamic>{
-        'email': 'juan@milpa.com',
-        'first_name': 'Juan',
-        'last_name': 'Pérez',
-        'role': 1,
-        'password': 'secreta123',
-        'confirm_password': 'secreta123',
-        'phone_number': '88881234',
-      });
-      expect(minimal.toJson().containsKey('latitude'), isFalse);
-      expect(minimal.toJson().containsKey('longitude'), isFalse);
-    });
-  });
-
-  group('FakeRegisterRepository', () {
-    test(
-      'resuelve sin lanzar y lanza cuando se configura para fallar',
-      () async {
-        await const FakeRegisterRepository(latency: Duration.zero).register(
-          const RegisterUserRequest(
-            email: 'a@b.co',
-            firstName: 'A',
-            lastName: 'B',
-            role: RegisterRole.buyer,
-            phoneNumber: '88881234',
-            password: 'secreta123',
-            confirmPassword: 'secreta123',
-          ),
-        );
-
-        expect(
-          const FakeRegisterRepository(
-            latency: Duration.zero,
-            shouldFail: true,
-          ).register(
-            const RegisterUserRequest(
-              email: 'a@b.co',
-              firstName: 'A',
-              lastName: 'B',
-              role: RegisterRole.buyer,
-              phoneNumber: '88881234',
-              password: 'secreta123',
-              confirmPassword: 'secreta123',
-            ),
-          ),
-          throwsStateError,
-        );
-      },
-    );
+  test('los roles usan los ids del contrato del servidor', () {
+    expect(RegisterRole.agricultor.roleId, 1);
+    expect(RegisterRole.compradorMinorista.roleId, 2);
+    expect(RegisterRole.compradorMayoristaDetallista.roleId, 3);
+    expect(RegisterRole.compradorMayoristaCorporativo.roleId, 4);
   });
 
   group('RegisterView', () {
-    late _RecordingRepository repository;
-
-    setUp(() => repository = _RecordingRepository());
-
-    Future<void> pumpRegister(WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(home: RegisterView(repository: repository)),
-      );
-    }
-
     testWidgets('el botón está deshabilitado hasta elegir un rol', (
       WidgetTester tester,
     ) async {
-      await pumpRegister(tester);
+      final fake = FakeAuthRepository();
+      await pumpRegister(tester, fake);
 
       expect(submitEnabled(tester), isFalse);
 
@@ -178,46 +84,127 @@ void main() {
       expect(submitEnabled(tester), isTrue);
     });
 
-    testWidgets('envía role=1 cuando se elige Comprador', (
+    testWidgets('Comprador define el rol 2 y muestra los tipos de comprador', (
       WidgetTester tester,
     ) async {
-      await pumpRegister(tester);
+      final fake = FakeAuthRepository();
+      await pumpRegister(tester, fake);
+
+      expect(find.text('Tipo de comprador'), findsNothing);
+
+      await tester.tap(find.text('Comprador'));
+      await tester.pump();
+
+      expect(find.text('Tipo de comprador'), findsOneWidget);
+      expect(find.text('Minorista'), findsOneWidget);
+      expect(find.text('Detallista'), findsOneWidget);
+      expect(find.text('Corporativo'), findsOneWidget);
+
+      await fillForm(tester);
+      await tapSubmit(tester);
+
+      expect(fake.lastRegisteredRole, 2);
+    });
+
+    testWidgets('Productor define el rol 1 y oculta los tipos de comprador', (
+      WidgetTester tester,
+    ) async {
+      final fake = FakeAuthRepository();
+      await pumpRegister(tester, fake);
+
+      await tester.tap(find.text('Comprador'));
+      await tester.pump();
+      expect(find.text('Tipo de comprador'), findsOneWidget);
+
+      await tester.tap(find.text('Productor'));
+      await tester.pump();
+      expect(find.text('Tipo de comprador'), findsNothing);
+
+      await fillForm(tester);
+      await tapSubmit(tester);
+
+      expect(fake.lastRegisteredRole, 1);
+    });
+
+    testWidgets('tocar Corporativo define el rol 4', (
+      WidgetTester tester,
+    ) async {
+      final fake = FakeAuthRepository();
+      await pumpRegister(tester, fake);
+
+      await tester.tap(find.text('Comprador'));
+      await tester.pump();
+      await tester.tap(find.text('Corporativo'));
+      await tester.pump();
+
+      await fillForm(tester);
+      await tapSubmit(tester);
+
+      expect(fake.lastRegisteredRole, 4);
+    });
+
+    testWidgets('tocar Detallista define el rol 3', (
+      WidgetTester tester,
+    ) async {
+      final fake = FakeAuthRepository();
+      await pumpRegister(tester, fake);
+
+      await tester.tap(find.text('Comprador'));
+      await tester.pump();
+      await tester.tap(find.text('Detallista'));
+      await tester.pump();
+
+      await fillForm(tester);
+      await tapSubmit(tester);
+
+      expect(fake.lastRegisteredRole, 3);
+    });
+
+    testWidgets('el envío exitoso registra y luego inicia sesión', (
+      WidgetTester tester,
+    ) async {
+      final fake = FakeAuthRepository();
+      await pumpRegister(tester, fake);
+
       await fillHappyPath(tester);
       await tapSubmit(tester);
 
-      expect(repository.received, isNotNull);
-      expect(repository.received!.role, RegisterRole.buyer);
-      expect(repository.received!.role.roleId, 1);
-      // El nombre se envía sin espacios sobrantes.
-      expect(repository.received!.firstName, 'Juan');
-      // El teléfono se envía solo con dígitos.
-      expect(repository.received!.phoneNumber, '88881234');
-      expect(
-        find.text('¡Cuenta creada! Ya puedes iniciar sesión.'),
-        findsOneWidget,
-      );
+      expect(fake.registerCalls, 1);
+      expect(fake.loginCalls, 1);
+      expect(fake.lastRegisteredRole, 2);
+      expect(fake.lastRegisteredEmail, 'juan@milpa.com');
     });
 
-    testWidgets('envía role=2 cuando se elige Productor', (
+    testWidgets('un 409 avisa que el correo ya está registrado', (
       WidgetTester tester,
     ) async {
-      await pumpRegister(tester);
-      await fillHappyPath(tester, role: 'Productor');
+      final fake = FakeAuthRepository(
+        registerError: const ApiException(409, 'conflict'),
+      );
+      await pumpRegister(tester, fake);
+
+      await fillHappyPath(tester);
       await tapSubmit(tester);
 
-      expect(repository.received!.role, RegisterRole.producer);
-      expect(repository.received!.role.roleId, 2);
+      expect(fake.registerCalls, 1);
+      expect(fake.loginCalls, 0);
+      expect(find.text('Ese correo ya está registrado'), findsOneWidget);
+      expect(find.byType(RegisterView), findsOneWidget);
+      expect(submitEnabled(tester), isTrue);
+
+      await tester.pumpAndSettle(const Duration(seconds: 5));
     });
 
     testWidgets('bloquea el envío si el formulario es inválido', (
       WidgetTester tester,
     ) async {
-      await pumpRegister(tester);
+      final fake = FakeAuthRepository();
+      await pumpRegister(tester, fake);
       await tester.tap(find.text('Comprador'));
       await tester.pump();
       await tapSubmit(tester);
 
-      expect(repository.received, isNull);
+      expect(fake.registerCalls, 0);
       expect(find.text('Ingresa tu nombre'), findsOneWidget);
       expect(find.text('Ingresa tu correo electrónico'), findsOneWidget);
       expect(find.text('Ingresa tu número de teléfono'), findsOneWidget);
@@ -226,7 +213,8 @@ void main() {
     testWidgets('rechaza contraseña corta, correo inválido y teléfono corto', (
       WidgetTester tester,
     ) async {
-      await pumpRegister(tester);
+      final fake = FakeAuthRepository();
+      await pumpRegister(tester, fake);
       await tester.tap(find.text('Comprador'));
       await tester.pump();
       await tester.enterText(fieldWithLabel('Nombre'), 'Juan');
@@ -241,7 +229,7 @@ void main() {
       await tester.pump();
       await tapSubmit(tester);
 
-      expect(repository.received, isNull);
+      expect(fake.registerCalls, 0);
       expect(find.text('Ingresa un correo válido'), findsOneWidget);
       expect(
         find.text('Ingresa un teléfono de 8 a 15 dígitos'),
@@ -254,58 +242,24 @@ void main() {
       expect(find.text('Las contraseñas no coinciden'), findsOneWidget);
     });
 
-    testWidgets('muestra SnackBar de error si el repository lanza', (
+    testWidgets('un fallo del registro muestra SnackBar y deja reintentar', (
       WidgetTester tester,
     ) async {
-      final _RecordingRepository failing = _RecordingRepository(
-        shouldFail: true,
-      );
-      await tester.pumpWidget(
-        MaterialApp(home: RegisterView(repository: failing)),
-      );
+      final fake = FakeAuthRepository(registerError: StateError('fallo'));
+      await pumpRegister(tester, fake);
+
       await fillHappyPath(tester);
       await tapSubmit(tester);
 
-      expect(failing.received, isNotNull);
+      expect(fake.registerCalls, 1);
+      expect(fake.loginCalls, 0);
       expect(
         find.text('No se pudo crear la cuenta. Intenta de nuevo.'),
         findsOneWidget,
       );
-      // El botón vuelve a estar disponible para reintentar.
       expect(submitEnabled(tester), isTrue);
-    });
 
-    testWidgets(
-      'departamento y municipio son opcionales y se omiten si vacíos',
-      (WidgetTester tester) async {
-        await pumpRegister(tester);
-        await fillHappyPath(tester);
-        await tapSubmit(tester);
-
-        expect(repository.received!.department, isEmpty);
-        expect(repository.received!.municipality, isEmpty);
-        expect(
-          repository.received!.toJson().containsKey('department'),
-          isFalse,
-        );
-      },
-    );
-
-    testWidgets('departamento y municipio se envían si se escriben', (
-      WidgetTester tester,
-    ) async {
-      await pumpRegister(tester);
-      await fillHappyPath(tester);
-      await tester.enterText(
-        fieldWithLabel('Departamento / Provincia'),
-        'Masaya',
-      );
-      await tester.enterText(fieldWithLabel('Municipio'), 'Masate');
-      await tester.pump();
-      await tapSubmit(tester);
-
-      expect(repository.received!.toJson()['department'], 'Masaya');
-      expect(repository.received!.toJson()['municipality'], 'Masate');
+      await tester.pumpAndSettle(const Duration(seconds: 5));
     });
 
     testWidgets('a 1000px de ancho los campos van en dos columnas', (
@@ -315,14 +269,13 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      await pumpRegister(tester);
+      final fake = FakeAuthRepository();
+      await pumpRegister(tester, fake);
 
-      // Nombre y apellido comparten la misma fila en ancho.
       final double firstRowY = tester.getTopLeft(fieldWithLabel('Nombre')).dy;
       final double lastRowY = tester.getTopLeft(fieldWithLabel('Apellido')).dy;
       expect(firstRowY, lastRowY);
 
-      // Y en ancho angosto se apilan.
       tester.view.physicalSize = const Size(400, 1400);
       await tester.pumpAndSettle();
       expect(

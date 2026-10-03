@@ -29,6 +29,33 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> signUp({
+    required String email,
+    required String firstName,
+    required String lastName,
+    required String phoneNumber,
+    required int role,
+    required String password,
+    required String confirmPassword,
+    String department = '',
+    String municipality = '',
+  }) async {
+    await _authRepository.register(
+      email: email,
+      firstName: firstName,
+      lastName: lastName,
+      phoneNumber: phoneNumber,
+      role: role,
+      password: password,
+      confirmPassword: confirmPassword,
+      department: department,
+      municipality: municipality,
+    );
+    await _authRepository.login(email: email, password: password);
+    _authenticated = true;
+    notifyListeners();
+  }
+
   Future<void> signOut() async {
     await _authRepository.logout();
     _authenticated = false;
