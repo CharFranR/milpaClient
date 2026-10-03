@@ -88,7 +88,12 @@ class ApiClient {
     }
     if (bodyText.trim().isEmpty) return null;
     try {
-      return jsonDecode(bodyText);
+      final dynamic decoded = jsonDecode(bodyText);
+      if (decoded is Map<String, dynamic>) {
+        if (decoded.isEmpty) return null;
+        if (decoded.containsKey('data')) return decoded['data'];
+      }
+      return decoded;
     } on FormatException {
       throw const NetworkException('Respuesta inesperada del servidor');
     }

@@ -8,10 +8,10 @@ import 'package:http/testing.dart';
 
 void main() {
   group('ApiClient respuestas exitosas', () {
-    test('GET con 200 y objeto JSON devuelve el Map decodificado', () async {
+    test('GET con 200 y envelope de objeto devuelve el Map interno', () async {
       final MockClient mockClient = MockClient(
         (http.Request request) async =>
-            http.Response('{"id": 7, "nombre": "maiz"}', 200),
+            http.Response('{"data": {"id": 7, "nombre": "maiz"}}', 200),
       );
 
       final dynamic result = await ApiClient(httpClient: mockClient)
@@ -20,10 +20,27 @@ void main() {
       expect(result, <String, dynamic>{'id': 7, 'nombre': 'maiz'});
     });
 
-    test('GET con 200 y arreglo JSON devuelve el List decodificado', () async {
+    test(
+      'GET con 200 y envelope de arreglo devuelve el List interno',
+      () async {
+        final MockClient mockClient = MockClient(
+          (http.Request request) async =>
+              http.Response('{"data": [{"id": 1}, {"id": 2}]}', 200),
+        );
+
+        final dynamic result = await ApiClient(httpClient: mockClient)
+            .get('/products');
+
+        expect(result, <dynamic>[
+          <String, dynamic>{'id': 1},
+          <String, dynamic>{'id': 2},
+        ]);
+      },
+    );
+
+    test('GET con 200 y arreglo sin envelope lo devuelve tal cual', () async {
       final MockClient mockClient = MockClient(
-        (http.Request request) async =>
-            http.Response('[{"id": 1}, {"id": 2}]', 200),
+        (http.Request request) async => http.Response('[{"id": 1}]', 200),
       );
 
       final dynamic result = await ApiClient(httpClient: mockClient)
@@ -31,8 +48,18 @@ void main() {
 
       expect(result, <dynamic>[
         <String, dynamic>{'id': 1},
-        <String, dynamic>{'id': 2},
       ]);
+    });
+
+    test('GET con 200 y objeto vacío sin data devuelve null', () async {
+      final MockClient mockClient = MockClient(
+        (http.Request request) async => http.Response('{}', 200),
+      );
+
+      final dynamic result = await ApiClient(httpClient: mockClient)
+          .get('/auth/session');
+
+      expect(result, isNull);
     });
 
     test('POST con 201 y cuerpo vacío devuelve null', () async {
