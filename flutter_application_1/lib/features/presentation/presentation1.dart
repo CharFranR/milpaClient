@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/presets.dart';
+import 'package:flutter_application_1/ui/app_tokens.dart';
 import 'package:flutter_application_1/login.dart';
+import 'package:flutter_application_1/features/presentation/presentation2.dart';
 
 
-class Presentation3 extends StatelessWidget {
-  const Presentation3({super.key});
+class Presentation1 extends StatelessWidget {
+  const Presentation1({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +36,7 @@ class Presentation3 extends StatelessWidget {
 
                     Expanded(
                       flex: 4,
-                      child: _MainLogo(logoPath: 'assets/paquete.png'),
+                      child: _MainLogo(logoPath: 'assets/planta.png'),
                     ),
 
                     Expanded(
@@ -52,13 +53,9 @@ class Presentation3 extends StatelessWidget {
 
                   ],
 
-
-
                 ),
 
-
               ),
-
 
               const Spacer(flex: 1),
 
@@ -71,7 +68,6 @@ class Presentation3 extends StatelessWidget {
   }
 }
 
-
 class _MainLogo extends StatelessWidget {
 
   final String logoPath;
@@ -82,7 +78,6 @@ class _MainLogo extends StatelessWidget {
     return Image.asset(logoPath);
   }
 }
-
 
 class _BuildText extends StatelessWidget {
 
@@ -100,7 +95,7 @@ class _BuildText extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: width * 0.1),
 
           child: Text(
-            'Publica tus productos',
+            'Descubre productores locales',
             textAlign: TextAlign.center,
 
             style: TextStyle(
@@ -119,7 +114,7 @@ class _BuildText extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: width * 0.1),
 
           child: Text(
-            'Si eres productor, crea tu tienda en minutos y llega a compradores de toda la región fácilmente.',
+            'Conecta directamente con agricultores y ganaderos de tu región. Productos frescos, sin intermediarios.',
 
             textAlign: TextAlign.center,
 
@@ -137,7 +132,6 @@ class _BuildText extends StatelessWidget {
   }
 }
 
-
 class _Buttons extends StatelessWidget {
 
   @override
@@ -153,9 +147,10 @@ class _Buttons extends StatelessWidget {
         TextButton(
           onPressed: (){
             Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => LoginPage()),
-            );
+              context, 
+               MaterialPageRoute(builder: (context) => Presentation2()),
+              );
+
           }, 
           child: Container(
 
@@ -170,7 +165,7 @@ class _Buttons extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: width * 0.3, vertical: height * 0.02),
 
             child: Text(
-              'Comenzar',
+              'Continuar',
 
               textAlign: TextAlign.center,
 
@@ -183,6 +178,25 @@ class _Buttons extends StatelessWidget {
 
             )),
 
+        ),
+
+        TextButton(
+          onPressed: (){
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => LoginPage()),
+            );
+          }, 
+          child: Text(
+            'Omitir',
+
+            style: TextStyle(
+              fontSize: 20,
+              color: Colors.blueGrey,
+
+            ),
+
+          ),
         ),
 
       ],

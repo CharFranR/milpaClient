@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/presets.dart';
+import 'package:flutter_application_1/features/auth/register_view.dart';
+import 'package:flutter_application_1/ui/app_tokens.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -496,7 +497,13 @@ class _SignUpRow extends StatelessWidget {
           style: TextStyle(fontSize: 14, color: AppColors.dark),
         ),
         GestureDetector(
-          onTap: () {}, 
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const RegisterView(),
+              ),
+            );
+          },
           child: Text(
             'Crear cuenta',
             style: TextStyle(

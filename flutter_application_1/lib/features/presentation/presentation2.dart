@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/presets.dart';
+import 'package:flutter_application_1/ui/app_tokens.dart';
 import 'package:flutter_application_1/login.dart';
-import 'package:flutter_application_1/presentation2.dart';
+import 'package:flutter_application_1/features/presentation/presentation3.dart';
 
 
-class Presentation1 extends StatelessWidget {
-  const Presentation1({super.key});
+class Presentation2 extends StatelessWidget {
+  const Presentation2({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +36,7 @@ class Presentation1 extends StatelessWidget {
 
                     Expanded(
                       flex: 4,
-                      child: _MainLogo(logoPath: 'assets/planta.png'),
+                      child: _MainLogo(logoPath: 'assets/carrito.png'),
                     ),
 
                     Expanded(
@@ -53,9 +53,13 @@ class Presentation1 extends StatelessWidget {
 
                   ],
 
+
+
                 ),
 
+
               ),
+
 
               const Spacer(flex: 1),
 
@@ -68,6 +72,7 @@ class Presentation1 extends StatelessWidget {
   }
 }
 
+
 class _MainLogo extends StatelessWidget {
 
   final String logoPath;
@@ -78,6 +83,7 @@ class _MainLogo extends StatelessWidget {
     return Image.asset(logoPath);
   }
 }
+
 
 class _BuildText extends StatelessWidget {
 
@@ -95,7 +101,7 @@ class _BuildText extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: width * 0.1),
 
           child: Text(
-            'Descubre productores locales',
+            'Compra directo del campo',
             textAlign: TextAlign.center,
 
             style: TextStyle(
@@ -114,7 +120,7 @@ class _BuildText extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: width * 0.1),
 
           child: Text(
-            'Conecta directamente con agricultores y ganaderos de tu región. Productos frescos, sin intermediarios.',
+            'Explora cientos de productos agropecuarios. Verduras, frutas, lácteos y más, con precios justos para todos.',
 
             textAlign: TextAlign.center,
 
@@ -132,6 +138,7 @@ class _BuildText extends StatelessWidget {
   }
 }
 
+
 class _Buttons extends StatelessWidget {
 
   @override
@@ -145,12 +152,11 @@ class _Buttons extends StatelessWidget {
       children: [
 
         TextButton(
-          onPressed: (){
+          onPressed: () {
             Navigator.push(
-              context, 
-               MaterialPageRoute(builder: (context) => Presentation2()),
-              );
-
+              context,
+              MaterialPageRoute(builder: (context) => Presentation3()),
+            );
           }, 
           child: Container(
 

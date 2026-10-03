@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/presets.dart';
+import 'package:flutter_application_1/ui/app_tokens.dart';
 
 class Intro1 extends StatelessWidget {
   const Intro1({super.key});

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/presets.dart';
+import 'package:flutter_application_1/ui/app_tokens.dart';
 import 'package:flutter_application_1/login.dart';
-import 'package:flutter_application_1/presentation3.dart';
 
 
-class Presentation2 extends StatelessWidget {
-  const Presentation2({super.key});
+class Presentation3 extends StatelessWidget {
+  const Presentation3({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +35,7 @@ class Presentation2 extends StatelessWidget {
 
                     Expanded(
                       flex: 4,
-                      child: _MainLogo(logoPath: 'assets/carrito.png'),
+                      child: _MainLogo(logoPath: 'assets/paquete.png'),
                     ),
 
                     Expanded(
@@ -101,7 +100,7 @@ class _BuildText extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: width * 0.1),
 
           child: Text(
-            'Compra directo del campo',
+            'Publica tus productos',
             textAlign: TextAlign.center,
 
             style: TextStyle(
@@ -120,7 +119,7 @@ class _BuildText extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: width * 0.1),
 
           child: Text(
-            'Explora cientos de productos agropecuarios. Verduras, frutas, lácteos y más, con precios justos para todos.',
+            'Si eres productor, crea tu tienda en minutos y llega a compradores de toda la región fácilmente.',
 
             textAlign: TextAlign.center,
 
@@ -152,10 +151,10 @@ class _Buttons extends StatelessWidget {
       children: [
 
         TextButton(
-          onPressed: () {
+          onPressed: (){
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => Presentation3()),
+              MaterialPageRoute(builder: (context) => LoginPage()),
             );
           }, 
           child: Container(
@@ -171,7 +170,7 @@ class _Buttons extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: width * 0.3, vertical: height * 0.02),
 
             child: Text(
-              'Continuar',
+              'Comenzar',
 
               textAlign: TextAlign.center,
 
@@ -184,25 +183,6 @@ class _Buttons extends StatelessWidget {
 
             )),
 
-        ),
-
-        TextButton(
-          onPressed: (){
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => LoginPage()),
-            );
-          }, 
-          child: Text(
-            'Omitir',
-
-            style: TextStyle(
-              fontSize: 20,
-              color: Colors.blueGrey,
-
-            ),
-
-          ),
         ),
 
       ],
