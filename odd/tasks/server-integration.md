@@ -23,8 +23,8 @@
 
 ## Etapa 1 — Core + Auth + Perfil
 
-- [ ] **T1** — Dependencia `http` + capa `lib/core/`: `ApiConfig`, `ApiException`/`NetworkException`, `ApiClient` con mapeo de errores; tests con `MockClient`.
-- [ ] **T2** — `TokenStore` (`flutter_secure_storage`) + modelos `UserDTO`/`LoginResponse` + `AuthRepository` real.
+- [x] **T1** — Dependencia `http` + capa `lib/core/`: `ApiConfig`, `ApiException`/`NetworkException`, `ApiClient` con mapeo de errores; tests con `MockClient`.
+- [x] **T2** — `TokenStore` (`flutter_secure_storage`) + modelos `UserDTO`/`LoginResponse` + `AuthRepository` real.
 - [ ] **T3** — Login real + sesión persistente + auth gate en `main.dart`.
 - [ ] **T4** — Register real + corrección de roles (1 agricultor, 2 comprador minorista, 3 mayorista detallista, 4 mayorista corporativo).
 - [ ] **T5** — Perfil real: `GET /users/{id}` + `PATCH /users/{id}` + "Editar perfil".
@@ -49,4 +49,7 @@
 
 ## Progreso
 
-- 2026-10-03: baseline de mocks commiteado en `main` (`9ce20f1`). Rama `feat/api-integration` creada. T1 en curso.
+- 2026-10-03: baseline de mocks commiteado en `main` (`9ce20f1`). Rama `feat/api-integration` creada. Doc ODD (`05e7d00`).
+- 2026-10-03: T1 completada — `lib/core/` (ApiConfig, ApiException/NetworkException, ApiClient) + 11 tests con MockClient; analyze limpio, 23 tests verdes, cero comentarios. Commit `db59796`.
+- 2026-10-03: T2 completada — `TokenStore` (flutter_secure_storage 11.2.0), `auth_models.dart` (User tolera `address_line ?? address`), `AuthRepository` (login/register/restoreSession/logout) y fix del envelope `{"data":...}` en ApiClient; 33 tests verdes, analyze limpio, APK debug OK. Commits `0b3cd0b` y `16622ba`. Siguiente: T3 (login real + sesión persistente + auth gate).
+- Hallazgos del server local (docker): todas las respuestas exitosas van envueltas en `{"data":...}`; el register EXIGE `phone_number` (500 si falta; la doc lo marca opcional — revisar del lado server); el UserDTO real trae `address_line`/`department`/`municipality` (la doc dice `address`). Usuario de prueba: `flutter.test@milpa.com` / `Password123!` (role 2).
