@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_application_1/core/models/auth_models.dart';
+import 'package:flutter_application_1/features/auth/session_controller.dart';
+import 'package:flutter_application_1/features/buyer/edit_profile.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
 const Color _sectionAccent = Color(0xff2563eb);
 
 const Color _editProfileButton = Color(0xff064407);
-
-
-const String _buyerName = 'Oscar Francisco Reyes Guevara';
-const String _buyerEmail = 'oscar@milpa.com';
 
 class BuyerProfile extends StatefulWidget {
   const BuyerProfile({super.key});
@@ -18,77 +17,118 @@ class BuyerProfile extends StatefulWidget {
 }
 
 class _BuyerProfileState extends State<BuyerProfile> {
+  bool _requestedLoad = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_requestedLoad) {
+      _requestedLoad = true;
+      SessionScope.of(context).loadUser();
+    }
+  }
+
+  String _fullName(User? user) {
+    if (user == null) return '—';
+    final String name = '${user.firstName} ${user.lastName}'.trim();
+    return name.isEmpty ? '—' : name;
+  }
+
+  String _location(User user) {
+    final String joined = <String>[
+      user.municipality,
+      user.department,
+    ].where((String value) => value.isNotEmpty).join(', ');
+    if (joined.isNotEmpty) return joined;
+    return user.addressLine.isEmpty ? '—' : user.addressLine;
+  }
+
+  Widget _content(SessionController session, User? user) {
+    if (user == null) {
+      if (session.loadingUser) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('No se pudo cargar el perfil'),
+            TextButton(
+              onPressed: () => session.loadUser(force: true),
+              child: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(
+        top: AppSpacing.lg,
+        bottom: AppSpacing.xxl,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _SectionHeader(icon: Icons.person, label: 'DATOS PERSONALES'),
+          const SizedBox(height: AppSpacing.md),
+          _InfoCard(
+            rows: [
+              _ProfileRowData(title: 'Nombre completo', value: _fullName(user)),
+              _ProfileRowData(title: 'Correo', value: user.email),
+              _ProfileRowData(
+                title: 'Teléfono',
+                value: user.phoneNumber.isEmpty ? '—' : user.phoneNumber,
+              ),
+              _ProfileRowData(title: 'Ubicación', value: _location(user)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          const _SectionHeader(icon: Icons.settings, label: 'CONFIGURACIÓN'),
+          const SizedBox(height: AppSpacing.md),
+          const _InfoCard(
+            rows: [
+              _ProfileRowData(title: 'Notificaciones', value: 'Activadas'),
+              _ProfileRowData(title: 'Idioma', value: 'Español'),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          const _SectionHeader(icon: Icons.lock_outline, label: 'SEGURIDAD'),
+          const SizedBox(height: AppSpacing.md),
+          _InfoCard(
+            rows: [
+              const _ProfileRowData(title: 'Cambiar contraseña'),
+              _ProfileRowData(
+                title: 'Cerrar sesión',
+                onTap: () => SessionScope.of(context).signOut(),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final session = SessionScope.of(context);
+    final User? user = session.user;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: AppColors.whitemodeBackgrund,
         body: Column(
           children: [
-            const _ProfileHeader(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.only(
-                  top: AppSpacing.lg,
-                  bottom: AppSpacing.xxl,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const _SectionHeader(
-                      icon: Icons.person,
-                      label: 'DATOS PERSONALES',
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    const _InfoCard(
-                      rows: [
-                        _ProfileRowData(
-                          title: 'Nombre completo',
-                          value: _buyerName,
-                        ),
-                        _ProfileRowData(title: 'Correo', value: _buyerEmail),
-                        _ProfileRowData(
-                          title: 'Teléfono',
-                          value: '+505 8888 1234',
-                        ),
-                        _ProfileRowData(
-                          title: 'Ubicación',
-                          value: 'Managua, Nicaragua',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    const _SectionHeader(
-                      icon: Icons.settings,
-                      label: 'CONFIGURACIÓN',
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    const _InfoCard(
-                      rows: [
-                        _ProfileRowData(
-                          title: 'Notificaciones',
-                          value: 'Activadas',
-                        ),
-                        _ProfileRowData(title: 'Idioma', value: 'Español'),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    const _SectionHeader(
-                      icon: Icons.lock_outline,
-                      label: 'SEGURIDAD',
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    const _InfoCard(
-                      rows: [
-                        _ProfileRowData(title: 'Cambiar contraseña'),
-                        _ProfileRowData(title: 'Cerrar sesión'),
-                      ],
-                    ),
-                  ],
+            _ProfileHeader(
+              name: _fullName(user),
+              email: user?.email ?? '—',
+              onEdit: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const EditProfilePage(),
                 ),
               ),
             ),
+            Expanded(child: _content(session, user)),
           ],
         ),
       ),
@@ -98,7 +138,15 @@ class _BuyerProfileState extends State<BuyerProfile> {
 
 /// Cabecera verde con avatar, identidad del comprador y acción de edición.
 class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader();
+  const _ProfileHeader({
+    required this.name,
+    required this.email,
+    required this.onEdit,
+  });
+
+  final String name;
+  final String email;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -118,23 +166,23 @@ class _ProfileHeader extends StatelessWidget {
             children: [
               const _ProfileAvatar(),
               const SizedBox(height: AppSpacing.md),
-              const Text(
-                _buyerName,
+              Text(
+                name,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
-              const Text(
-                _buyerEmail,
-                style: TextStyle(fontSize: 13, color: AppColors.yelow),
+              Text(
+                email,
+                style: const TextStyle(fontSize: 13, color: AppColors.yelow),
               ),
               const SizedBox(height: AppSpacing.lg),
               FilledButton(
-                onPressed: () {},
+                onPressed: onEdit,
                 style: FilledButton.styleFrom(
                   backgroundColor: _editProfileButton,
                   foregroundColor: Colors.white,
@@ -248,7 +296,7 @@ class _ProfileRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {},
+      onTap: data.onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg,
@@ -287,8 +335,9 @@ class _ProfileRow extends StatelessWidget {
 }
 
 class _ProfileRowData {
-  const _ProfileRowData({required this.title, this.value});
+  const _ProfileRowData({required this.title, this.value, this.onTap});
 
   final String title;
   final String? value;
+  final VoidCallback? onTap;
 }

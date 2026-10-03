@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_application_1/core/api_exception.dart';
 import 'package:flutter_application_1/features/auth/register_models.dart';
-import 'package:flutter_application_1/features/auth/register_repository.dart';
+import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 import 'package:flutter_application_1/ui/labeled_field.dart';
 
@@ -18,11 +19,7 @@ const int _kPhoneMaxDigits = 15;
 
 /// Formulario de registro de Milpa.
 class RegisterView extends StatefulWidget {
-  const RegisterView({super.key, this.repository});
-
-  /// Inyectable para poder probar el flujo sin red. Si es `null` se usa un
-  /// [FakeRegisterRepository].
-  final RegisterRepository? repository;
+  const RegisterView({super.key});
 
   @override
   State<RegisterView> createState() => _RegisterViewState();
@@ -41,8 +38,6 @@ class _RegisterViewState extends State<RegisterView> {
   final TextEditingController _departmentController = TextEditingController();
   final TextEditingController _municipalityController = TextEditingController();
 
-  late final RegisterRepository _repository;
-
   /// `null` significa "todavía no eligió". El botón de enviar permanece
   /// deshabilitado mientras esté en `null`.
   RegisterRole? _role;
@@ -51,12 +46,6 @@ class _RegisterViewState extends State<RegisterView> {
   bool _isSubmitting = false;
 
   static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-
-  @override
-  void initState() {
-    super.initState();
-    _repository = widget.repository ?? const FakeRegisterRepository();
-  }
 
   @override
   void dispose() {
@@ -84,36 +73,42 @@ class _RegisterViewState extends State<RegisterView> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     FocusScope.of(context).unfocus();
+    final session = SessionScope.of(context);
     setState(() => _isSubmitting = true);
 
-    final RegisterUserRequest request = RegisterUserRequest(
-      email: _emailController.text.trim(),
-      firstName: _firstNameController.text.trim(),
-      lastName: _lastNameController.text.trim(),
-      role: _role!,
-      phoneNumber: _digitsOnly(_phoneController.text.trim()),
-      password: _passwordController.text,
-      confirmPassword: _confirmPasswordController.text,
-      department: _departmentController.text.trim(),
-      municipality: _municipalityController.text.trim(),
-    );
-
     try {
-      await _repository.register(request);
-    } catch (_) {
+      await session.signUp(
+        email: _emailController.text.trim(),
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        phoneNumber: _digitsOnly(_phoneController.text.trim()),
+        role: _role!.roleId,
+        password: _passwordController.text,
+        confirmPassword: _confirmPasswordController.text,
+        department: _departmentController.text.trim(),
+        municipality: _municipalityController.text.trim(),
+      );
+      // Cierra el autofill para que el gestor de contraseñas del sistema pueda
+      // guardar (o descartar) lo escrito.
+      TextInput.finishAutofillContext();
       if (!mounted) return;
-      setState(() => _isSubmitting = false);
-      _showMessage('No se pudo crear la cuenta. Intenta de nuevo.');
-      return;
+      Navigator.of(context).maybePop();
+    } catch (error) {
+      if (!mounted) return;
+      _showMessage(_registerErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
+  }
 
-    // Cierra el autofill para que el gestor de contraseñas del sistema pueda
-    // guardar (o descartar) lo escrito.
-    TextInput.finishAutofillContext();
-
-    if (!mounted) return;
-    setState(() => _isSubmitting = false);
-    _showMessage('¡Cuenta creada! Ya puedes iniciar sesión.');
+  String _registerErrorMessage(Object error) {
+    if (error is ApiException) {
+      if (error.statusCode == 409) return 'Ese correo ya está registrado';
+      if (error.statusCode == 400) return 'Revisá los datos del formulario';
+      return 'No se pudo crear la cuenta. Intenta de nuevo.';
+    }
+    if (error is NetworkException) return error.message;
+    return 'No se pudo crear la cuenta. Intenta de nuevo.';
   }
 
   void _showMessage(String text) {
@@ -186,6 +181,11 @@ class _RegisterViewState extends State<RegisterView> {
   // ───────────────────────── SOY… ─────────────────────────
 
   List<Widget> _roleSection() {
+    final bool isBuyer =
+        _role == RegisterRole.compradorMinorista ||
+        _role == RegisterRole.compradorMayoristaDetallista ||
+        _role == RegisterRole.compradorMayoristaCorporativo;
+
     return <Widget>[
       const Text('Soy…', style: AppText.sectionTitle),
       const SizedBox(height: AppSpacing.sm),
@@ -200,8 +200,9 @@ class _RegisterViewState extends State<RegisterView> {
                 title: 'Comprador',
                 description: 'Quiero comprar productos',
                 assetPath: 'assets/comprador.png',
-                selected: _role == RegisterRole.buyer,
-                onTap: () => setState(() => _role = RegisterRole.buyer),
+                selected: isBuyer,
+                onTap: () =>
+                    setState(() => _role = RegisterRole.compradorMinorista),
               ),
             ),
             const SizedBox(width: AppSpacing.md),
@@ -210,13 +211,44 @@ class _RegisterViewState extends State<RegisterView> {
                 title: 'Productor',
                 description: 'Quiero vender mis cosechas',
                 assetPath: 'assets/productor.png',
-                selected: _role == RegisterRole.producer,
-                onTap: () => setState(() => _role = RegisterRole.producer),
+                selected: _role == RegisterRole.agricultor,
+                onTap: () => setState(() => _role = RegisterRole.agricultor),
               ),
             ),
           ],
         ),
       ),
+      if (isBuyer) ...<Widget>[
+        const SizedBox(height: AppSpacing.md),
+        Text('Tipo de comprador', style: AppText.caption),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: <Widget>[
+            _BuyerTypeChip(
+              label: 'Minorista',
+              selected: _role == RegisterRole.compradorMinorista,
+              onTap: () =>
+                  setState(() => _role = RegisterRole.compradorMinorista),
+            ),
+            _BuyerTypeChip(
+              label: 'Detallista',
+              selected: _role == RegisterRole.compradorMayoristaDetallista,
+              onTap: () => setState(
+                () => _role = RegisterRole.compradorMayoristaDetallista,
+              ),
+            ),
+            _BuyerTypeChip(
+              label: 'Corporativo',
+              selected: _role == RegisterRole.compradorMayoristaCorporativo,
+              onTap: () => setState(
+                () => _role = RegisterRole.compradorMayoristaCorporativo,
+              ),
+            ),
+          ],
+        ),
+      ],
       const SizedBox(height: AppSpacing.xl),
     ];
   }
@@ -568,6 +600,48 @@ class _RoleCard extends StatelessWidget {
               const SizedBox(height: 2),
               Text(description, style: AppText.caption),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BuyerTypeChip extends StatelessWidget {
+  const _BuyerTypeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? AppColors.blackGreen : Colors.transparent,
+      borderRadius: BorderRadius.circular(AppRadius.pill),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            border: Border.all(
+              color: selected ? Colors.transparent : AppColors.blackGreen,
+              width: 1.2,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: selected ? Colors.white : AppColors.blackGreen,
+            ),
           ),
         ),
       ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/api_exception.dart';
 import 'package:flutter_application_1/features/auth/register_view.dart';
+import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
 class LoginPage extends StatefulWidget {
@@ -35,8 +37,8 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
     final bool? next = inset > _lastInset
         ? true
         : inset < _lastInset
-            ? false
-            : null;
+        ? false
+        : null;
     _lastInset = inset;
 
     if (next != null && next != _keyboardOpen) {
@@ -54,13 +56,32 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
+    final session = SessionScope.of(context);
     setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Inicio de sesión correcto')),
-    );
+    try {
+      await session.signIn(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(_loginErrorMessage(error))));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String _loginErrorMessage(Object error) {
+    if (error is ApiException) {
+      if (error.statusCode == 401 || error.statusCode == 404) {
+        return 'Correo o contraseña incorrectos';
+      }
+      return 'No se pudo iniciar sesión. Intente de nuevo.';
+    }
+    if (error is NetworkException) return error.message;
+    return 'No se pudo iniciar sesión. Intente de nuevo.';
   }
 
   @override
@@ -218,7 +239,9 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
                               children: [
                                 Expanded(
                                   child: Divider(
-                                    color: AppColors.dark.withValues(alpha: 0.15),
+                                    color: AppColors.dark.withValues(
+                                      alpha: 0.15,
+                                    ),
                                   ),
                                 ),
                                 Padding(
@@ -229,13 +252,17 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
                                     'o',
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: AppColors.dark.withValues(alpha: 0.5),
+                                      color: AppColors.dark.withValues(
+                                        alpha: 0.5,
+                                      ),
                                     ),
                                   ),
                                 ),
                                 Expanded(
                                   child: Divider(
-                                    color: AppColors.dark.withValues(alpha: 0.15),
+                                    color: AppColors.dark.withValues(
+                                      alpha: 0.15,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -269,7 +296,7 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
 
                       // ───── CREAR CUENTA: abajo, se desvanece con teclado ─────
                       Expanded(
-                         flex: _keyboardOpen ? 0 : 1,
+                        flex: _keyboardOpen ? 0 : 1,
                         child: Align(
                           alignment: Alignment.bottomCenter,
                           child: Padding(
@@ -462,10 +489,7 @@ class _LabeledField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: BorderSide(
-                color: AppColors.blackGreen,
-                width: 1.5,
-              ),
+              borderSide: BorderSide(color: AppColors.blackGreen, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
@@ -499,9 +523,7 @@ class _SignUpRow extends StatelessWidget {
         GestureDetector(
           onTap: () {
             Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const RegisterView(),
-              ),
+              MaterialPageRoute<void>(builder: (_) => const RegisterView()),
             );
           },
           child: Text(
