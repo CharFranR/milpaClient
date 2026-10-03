@@ -30,17 +30,38 @@
 - [ ] **T5** — Perfil real: `GET /users/{id}` + `PATCH /users/{id}` + "Editar perfil".
 - [ ] **T6** — Verificación end-to-end contra el server + evidencia en este documento.
 
+**Server (mínimo, no bloquea):**
+
+- `ErrPhoneNumberRequired` a la lista de `IsValidationError` (1 línea) → register sin teléfono responde 400 en vez de 500.
+
 ## Etapa 2 — Catálogo + Chat (roadmap)
 
-- Catálogo por `GET /search` (no existe list-all de ofertas) con filtros, orden y paginación; chips por `GET /categories`.
+**Cliente:**
+
+- Catálogo por `GET /search` (no existe list-all de ofertas) con filtros (incluye `category_id`, existe en código pero no está documentado), orden y paginación; chips desde `GET /categories` (reales: Frutales, Cítricos, Otros — reemplazan los del mock).
 - Detalle de oferta (pantalla nueva): `GET /offerings/{id}` + vendedor + `GET /reviews/average` + "Chatear" (`POST /conversations`).
 - Imágenes de red (`/images/{filename}`) con fallback al emoji.
 - Conversaciones: `GET /conversations`; chat con `GET/POST /messages` + WebSocket `/ws/{id}` (`web_socket_channel`; subprotocolo `milpa.chat.v1` + `bearer.<JWT>`; aviso de sponsor sin `sender_id`).
 
-## Etapa 3 — Mayorista + Transacciones (roadmap)
+**Server (para que la etapa sea demostrable):**
 
-- `supply-requests` (crear/listar/editar/cancelar; FAB central como "Nueva solicitud"), ofertas (`/supply-offers/requests/{id}`), priorización, like/pass, transacciones (`confirm-start`/`confirm-delivery`/cancel), reseñas (`POST /reviews`), liquidaciones (`GET /liquidations/open`), reportes (`POST /reports`).
+- Seed de datos: agricultor(es) de prueba + ofertas + inventario, indexados a Elasticsearch. Sin esto el catálogo se ve vacío (la única migración con datos hoy es la de categorías).
+- Actualizar `API.md`: documentar `category_id` en search; corregir `UserDTO` (`address_line`/`department`/`municipality`) y la obligatoriedad real de `phone_number`.
+
+## Etapa 3 — Mayorista + Transacciones + Liquidaciones (roadmap)
+
+**Cliente:**
+
+- `supply-requests` (crear/listar/editar/cancelar; FAB central como "Nueva solicitud"; UI gateada a roles mayorista 3/4), ofertas (`/supply-offers/requests/{id}`), priorización, like/pass, transacciones (`confirm-start`/`confirm-delivery`/cancel), reseñas (`POST /reviews`), liquidaciones (listar públicas + detalle), reportes (`POST /reports`).
 - Quirks del server a manejar: `address` con claves capitalizadas; `SupplyOffer` usa `measurement`; guards de reseñas devuelven 500; `PATCH /offerings/{id}` borra.
+
+**Server (para completar el brief):**
+
+- Rol mayorista en supply-requests: exigir roles 3/4 en create (hoy cualquier autenticado publica — router solo con Authenticate/Suspension).
+- Liquidaciones: auth opcional en las lecturas (`/open`, `/`, `/{id}`) para que la visibilidad restringida funcione; ampliar visibilidad a los niveles del brief (hoy solo `public|private`); flujo de interés/asignación manual (endpoint de interés del comprador + listado de interesados para el agricultor).
+- Reseñas: listar las recibidas por un usuario (hoy solo "escritas por" o por empresa). Menor.
+
+**Decisión del equipo:** FCFS descartado conscientemente por el programador del server — la asignación de liquidaciones es solo manual.
 
 ## Verificación
 
@@ -53,3 +74,4 @@
 - 2026-10-03: T1 completada — `lib/core/` (ApiConfig, ApiException/NetworkException, ApiClient) + 11 tests con MockClient; analyze limpio, 23 tests verdes, cero comentarios. Commit `db59796`.
 - 2026-10-03: T2 completada — `TokenStore` (flutter_secure_storage 11.2.0), `auth_models.dart` (User tolera `address_line ?? address`), `AuthRepository` (login/register/restoreSession/logout) y fix del envelope `{"data":...}` en ApiClient; 33 tests verdes, analyze limpio, APK debug OK. Commits `0b3cd0b` y `16622ba`. Siguiente: T3 (login real + sesión persistente + auth gate).
 - Hallazgos del server local (docker): todas las respuestas exitosas van envueltas en `{"data":...}`; el register EXIGE `phone_number` (500 si falta; la doc lo marca opcional — revisar del lado server); el UserDTO real trae `address_line`/`department`/`municipality` (la doc dice `address`). Usuario de prueba: `flutter.test@milpa.com` / `Password123!` (role 2).
+- 2026-10-03: Plan actualizado — cada etapa integra su bloque server (Etapa 1: fix teléfono; Etapa 2: seed de datos + doc drift; Etapa 3: rol mayorista, liquidaciones, reseñas). FCFS descartado por decisión consciente del programador del server (solo asignación manual).
