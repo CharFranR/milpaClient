@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_application_1/layout/buyer.dart';
+import 'package:flutter_application_1/features/auth/auth_gate.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
 void main() async {
@@ -32,7 +32,7 @@ class MainApp extends StatelessWidget {
       ),
 
       // home: const LoginPage(),
-      home: const BuyerLayout(),
+      home: const AuthGate(),
     );
   }
 }
