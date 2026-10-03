@@ -27,7 +27,7 @@
 - [x] **T2** — `TokenStore` (`flutter_secure_storage`) + modelos `UserDTO`/`LoginResponse` + `AuthRepository` real.
 - [x] **T3** — Login real + sesión persistente + auth gate en `main.dart`.
 - [x] **T4** — Register real + corrección de roles (1 agricultor, 2 comprador minorista, 3 mayorista detallista, 4 mayorista corporativo).
-- [ ] **T5** — Perfil real: `GET /users/{id}` + `PATCH /users/{id}` + "Editar perfil".
+- [x] **T5** — Perfil real: `GET /users/{id}` + `PATCH /users/{id}` + "Editar perfil".
 - [ ] **T6** — Verificación end-to-end contra el server + evidencia en este documento.
 
 **Server (mínimo, no bloquea):**
@@ -77,3 +77,5 @@
 - 2026-10-03: Plan actualizado — cada etapa integra su bloque server (Etapa 1: fix teléfono; Etapa 2: seed de datos + doc drift; Etapa 3: rol mayorista, liquidaciones, reseñas). FCFS descartado por decisión consciente del programador del server (solo asignación manual).
 - 2026-10-03: T3 completada — `SessionController`/`SessionScope` (InheritedNotifier, sin paquetes extra), `AuthGate` (splash → LoginPage o BuyerLayout), login real con errores mapeados (401/404 → "Correo o contraseña incorrectos"); 37 tests verdes, analyze limpio, cero comentarios. Commit `f6c1ebb`. Nota: el overflow de `_SignUpRow` aparece en widget tests (fuente de prueba ancha) — workaround solo en el test; el fix real sigue como ejercicio pendiente. Siguiente: T4 (register real + roles 1–4).
 - 2026-10-03: T4 completada — register real con roles del server (1 agricultor, 2 minorista, 3 detallista, 4 corporativo; cards del Figma + chips "Tipo de comprador"), auto-login tras registro (`signUp` = register + login + notificar), fix de arquitectura: `SessionScope` movido POR ENCIMA de `MaterialApp` (las rutas pusheadas como RegisterView no heredaban el scope del AuthGate), fake compartido en `test/helpers/fake_auth_repository.dart`, scaffolding eliminado (`register_repository.dart` + `RegisterUserRequest`); 38 tests verdes (incluye flujo e2e login→register→BuyerLayout), analyze limpio, cero comentarios. Commit `2fe9a53`. Siguiente: T5 (perfil real GET/PATCH + Editar perfil).
+- 2026-10-03: T5 completada — `UserRepository` (GET/PATCH `/users/{id}`, PATCH re-fetch porque responde `{}`), `SessionController` con usuario actual (`loadUser` con estados de carga, `updateProfile`), perfil 100% real (sin hardcodeos: datos del server, retry, "Editar perfil" con pantalla nueva, "Cerrar sesión" funcional); 42 tests verdes, analyze limpio, cero comentarios. Commit `3178cf8`. Siguiente: T6 (verificación e2e Etapa 1).
+- Setup dev verificado por el usuario: teléfono físico Samsung por USB + `adb reverse tcp:8080 tcp:8080` + cleartext debug (commit `84cbec8`); login/register funcionando contra el docker local. Para Render: `--dart-define=API_BASE_URL=https://<url>/api/v1` (URL pendiente de que el usuario la comparta).
