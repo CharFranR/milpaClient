@@ -13,6 +13,7 @@ class FakeAuthRepository extends AuthRepository {
 
   int registerCalls = 0;
   int loginCalls = 0;
+  int logoutCalls = 0;
   int? lastRegisteredRole;
   String? lastRegisteredEmail;
 
@@ -61,5 +62,7 @@ class FakeAuthRepository extends AuthRepository {
   }
 
   @override
-  Future<void> logout() async {}
+  Future<void> logout() async {
+    logoutCalls++;
+  }
 }

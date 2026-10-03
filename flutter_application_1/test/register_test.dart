@@ -8,6 +8,7 @@ import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/ui/labeled_field.dart';
 
 import 'helpers/fake_auth_repository.dart';
+import 'helpers/fake_user_repository.dart';
 
 Finder fieldWithLabel(String label) {
   return find.descendant(
@@ -27,7 +28,10 @@ bool submitEnabled(WidgetTester tester) =>
 Future<void> pumpRegister(WidgetTester tester, FakeAuthRepository fake) async {
   await tester.pumpWidget(
     SessionScope(
-      controller: SessionController(authRepository: fake),
+      controller: SessionController(
+        authRepository: fake,
+        userRepository: FakeUserRepository(),
+      ),
       child: const MaterialApp(home: RegisterView()),
     ),
   );

@@ -5,6 +5,7 @@ import 'package:flutter_application_1/core/token_store.dart';
 import 'package:flutter_application_1/features/auth/auth_gate.dart';
 import 'package:flutter_application_1/features/auth/auth_repository.dart';
 import 'package:flutter_application_1/features/auth/session_controller.dart';
+import 'package:flutter_application_1/features/auth/user_repository.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
 void main() async {
@@ -20,19 +21,26 @@ void main() async {
 }
 
 class MainApp extends StatefulWidget {
-  const MainApp({super.key, this.authRepository});
+  const MainApp({super.key, this.authRepository, this.userRepository});
 
   final AuthRepository? authRepository;
+  final UserRepository? userRepository;
 
   @override
   State<MainApp> createState() => _MainAppState();
 }
 
 class _MainAppState extends State<MainApp> {
+  late final ApiClient _apiClient = ApiClient();
+  late final TokenStore _tokenStore = TokenStore();
+
   late final SessionController _session = SessionController(
     authRepository:
         widget.authRepository ??
-        AuthRepository(apiClient: ApiClient(), tokenStore: TokenStore()),
+        AuthRepository(apiClient: _apiClient, tokenStore: _tokenStore),
+    userRepository:
+        widget.userRepository ??
+        UserRepository(apiClient: _apiClient, tokenStore: _tokenStore),
   );
 
   @override
