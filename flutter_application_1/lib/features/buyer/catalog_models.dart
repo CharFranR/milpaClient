@@ -1,4 +1,4 @@
-import 'package:flutter_application_1/core/api_config.dart';
+import 'package:flutter_application_1/core/image_url.dart';
 
 enum CatalogSort {
   relevance('relevance'),
@@ -76,12 +76,7 @@ class CatalogItem {
   final double latitude;
   final double longitude;
 
-  String? get imageSrc {
-    if (imageUrl.isEmpty) return null;
-    final Uri? uri = Uri.tryParse(imageUrl);
-    if (uri != null && uri.hasScheme) return imageUrl;
-    return '${ApiConfig.apiBaseUrl}/images/${imageUrl.split('/').last}';
-  }
+  String? get imageSrc => resolveImageSrc(imageUrl);
 }
 
 class CatalogPage {
