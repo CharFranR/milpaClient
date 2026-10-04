@@ -18,7 +18,7 @@
 
 - Cero comentarios en el código (preferencia del usuario). Decisiones importantes → Engram.
 - Contrato: `Hackaton2026/API.md`. Base URL por `--dart-define API_BASE_URL` (default `http://10.0.2.2:8080/api/v1`).
-- Rama `feat/api-integration`, commits por work unit (Conventional Commits). Push/PR/merge: decisión del usuario.
+- Rama por etapa (`feat/api-integration` Etapa 1, `feat/catalog-chat` Etapa 2), commits por work unit (Conventional Commits). Push/PR/merge: decisión del usuario.
 - Sin refresh token: un 401 → logout limpio hacia login.
 
 ## Etapa 1 — Core + Auth + Perfil
@@ -36,14 +36,19 @@
 
 - `ErrPhoneNumberRequired` a la lista de `IsValidationError` (1 línea) → register sin teléfono responde 400 en vez de 500.
 
-## Etapa 2 — Catálogo + Chat (roadmap)
+## Etapa 2 — Catálogo + Chat
 
-**Cliente:**
+- [ ] **T7** — Capa de catálogo: modelos (`CatalogItem`, `CatalogPage`, `CatalogCategory`, `CatalogSort`) + `CatalogRepository` (`GET /search`, `GET /categories`) + tests con `MockClient`.
+- [ ] **T8** — Explorar real: buscador con debounce, chips desde `GET /categories`, grilla desde `GET /search`, imágenes de red con fallback al emoji, conteo de resultados, orden (relevancia / precio asc-desc), paginación ("Cargar más") y estados de carga/error/vacío + widget tests.
+- [ ] **T9** — Detalle de oferta (pantalla nueva): `GET /offerings/{id}` + vendedor + `GET /reviews/average` + "Chatear" (`POST /conversations`).
+- [ ] **T10** — Conversaciones: `GET /conversations`; chat con `GET/POST /messages` + WebSocket `/ws/{id}` (`web_socket_channel`; subprotocolo `milpa.chat.v1` + `bearer.<JWT>`; aviso de sponsor sin `sender_id`).
 
-- Catálogo por `GET /search` (no existe list-all de ofertas) con filtros (incluye `category_id`, existe en código pero no está documentado), orden y paginación; chips desde `GET /categories` (reales: Frutales, Cítricos, Otros — reemplazan los del mock).
-- Detalle de oferta (pantalla nueva): `GET /offerings/{id}` + vendedor + `GET /reviews/average` + "Chatear" (`POST /conversations`).
-- Imágenes de red (`/images/{filename}`) con fallback al emoji.
-- Conversaciones: `GET /conversations`; chat con `GET/POST /messages` + WebSocket `/ws/{id}` (`web_socket_channel`; subprotocolo `milpa.chat.v1` + `bearer.<JWT>`; aviso de sponsor sin `sender_id`).
+**Decisiones de alcance (T7–T8):**
+
+- No hay list-all de ofertas: el catálogo es `GET /search` sin término (público); `page` 1-based, `page_size` 20 (default del server, máx 100).
+- `image_url` guarda `uploads/<archivo>`: el cliente arma `{base}/images/<archivo>` con el último segmento; si viene URL absoluta se usa tal cual; fallback de UI al emoji.
+- Filtros avanzados (departamento, rango de precio) diferidos; las píldoras muertas del mock se reemplazan por orden real (Relevancia / Precio).
+- Paginación con botón "Cargar más"; sin pull-to-refresh.
 
 **Server (para que la etapa sea demostrable):**
 
@@ -83,3 +88,4 @@
 - Setup dev verificado por el usuario: teléfono físico Samsung por USB + `adb reverse tcp:8080 tcp:8080` + cleartext debug (commit `84cbec8`); login/register funcionando contra el docker local. Para Render: `--dart-define=API_BASE_URL=https://<url>/api/v1` (URL pendiente de que el usuario la comparta).
 - 2026-10-03: **T6 completada — ETAPA 1 CERRADA ✅**. Evidencia contrato API (curl): register 201 → login 200 (token, expires_in 86400) → GET privado → PATCH `{}` → persistencia verificada (`first_name` + `address_line`) → login con contraseña mala 401 → register duplicado 409. Evidencia en teléfono físico (Samsung R5CT33QFD9M vía adb reverse): perfil con datos reales de la cuenta del usuario; sesión persiste tras force-stop + relaunch; edición de perfil con round-trip visible (nombre temporal "OscarT6" → guardado → restaurado); logout → login limpio; login con cuenta de prueba → perfil muestra los datos de esa cuenta (incluida `address_line`). Capturas 01-15 en `/tmp/opencode/t6/`.
 - Nota: el teléfono quedó logueado con `flutter.test@milpa.com` (cuenta de prueba); para volver a la cuenta personal: "Cerrar sesión" + login. Siguiente: **Etapa 2** (catálogo real + chat).
+- 2026-10-03: Etapa 2 planificada (T7–T10) y rama `feat/catalog-chat` creada. Arranca T7 (capa de catálogo) y T8 (Explorar real). Contrato re-verificado contra el server: search público 1-based (`page_size` default 20, máx 100), `image_url` = `uploads/<archivo>` con lectura pública en `/images/<archivo>`, categorías reales Frutales/Cítricos/Otros.
