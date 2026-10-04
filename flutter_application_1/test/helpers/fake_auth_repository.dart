@@ -16,6 +16,9 @@ class FakeAuthRepository extends AuthRepository {
   int logoutCalls = 0;
   int? lastRegisteredRole;
   String? lastRegisteredEmail;
+  String? lastRegisteredAddress;
+  double? lastRegisteredLatitude;
+  double? lastRegisteredLongitude;
 
   @override
   Future<({String token, String userId})?> restoreSession() async => session;
@@ -46,10 +49,15 @@ class FakeAuthRepository extends AuthRepository {
     String address = '',
     String department = '',
     String municipality = '',
+    double? latitude,
+    double? longitude,
   }) async {
     registerCalls++;
     lastRegisteredRole = role;
     lastRegisteredEmail = email;
+    lastRegisteredAddress = address;
+    lastRegisteredLatitude = latitude;
+    lastRegisteredLongitude = longitude;
     if (registerError != null) throw registerError!;
     return const User(
       id: 'user-1',

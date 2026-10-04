@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/api_exception.dart';
+import 'package:flutter_application_1/core/location_reporter.dart';
 import 'package:flutter_application_1/core/models/auth_models.dart';
 import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
@@ -8,7 +9,12 @@ import 'package:flutter_application_1/ui/labeled_field.dart';
 const double _kWideBreakpoint = 600;
 
 class EditProfilePage extends StatefulWidget {
-  const EditProfilePage({super.key});
+  const EditProfilePage({
+    super.key,
+    this.locationReporter = const DeviceLocationReporter(),
+  });
+
+  final LocationReporter locationReporter;
 
   @override
   State<EditProfilePage> createState() => _EditProfilePageState();
@@ -27,6 +33,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   bool _isSaving = false;
   bool _prefilled = false;
+  bool _sharingLocation = false;
+  bool _locating = false;
+  Coordinates? _coordinates;
 
   static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
@@ -82,6 +91,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
         department: _departmentController.text.trim(),
         municipality: _municipalityController.text.trim(),
         address: _addressController.text.trim(),
+        latitude: _coordinates?.latitude,
+        longitude: _coordinates?.longitude,
       );
       if (!mounted) return;
       Navigator.of(context).maybePop();
@@ -178,6 +189,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         ),
                         const SizedBox(height: AppSpacing.md),
                         _addressField(),
+                        const SizedBox(height: AppSpacing.sm),
+                        _locationSharingTile(),
                         const SizedBox(height: AppSpacing.xl),
                         _saveButton(),
                       ],
@@ -268,6 +281,45 @@ class _EditProfilePageState extends State<EditProfilePage> {
       textInputAction: TextInputAction.done,
       onFieldSubmitted: (_) => _save(),
     );
+  }
+
+  Widget _locationSharingTile() {
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: const Text('Compartir mi ubicación'),
+      subtitle: Text(
+        _locating
+            ? 'Obteniendo tu ubicación…'
+            : 'Opcional: nos ayuda a recomendarte productores cercanos',
+        style: AppText.caption,
+      ),
+      value: _sharingLocation,
+      activeThumbColor: AppColors.blackGreen,
+      onChanged: _locating ? null : _toggleLocationSharing,
+    );
+  }
+
+  Future<void> _toggleLocationSharing(bool value) async {
+    if (!value) {
+      setState(() {
+        _sharingLocation = false;
+        _coordinates = null;
+      });
+      return;
+    }
+
+    setState(() => _locating = true);
+    final Coordinates? coordinates = await widget.locationReporter.capture();
+    if (!mounted) return;
+
+    setState(() {
+      _locating = false;
+      _coordinates = coordinates;
+      _sharingLocation = coordinates != null;
+    });
+    if (coordinates == null) {
+      _showMessage('No pudimos obtener tu ubicación. Revisá los permisos.');
+    }
   }
 
   Widget _saveButton() {

@@ -35,6 +35,8 @@ class AuthRepository {
     String address = '',
     String department = '',
     String municipality = '',
+    double? latitude,
+    double? longitude,
   }) async {
     final dynamic json = await _api.post(
       '/auth/register',
@@ -49,6 +51,8 @@ class AuthRepository {
         if (address.isNotEmpty) 'address': address,
         if (department.isNotEmpty) 'department': department,
         if (municipality.isNotEmpty) 'municipality': municipality,
+        'latitude': ?latitude,
+        'longitude': ?longitude,
       },
     );
     return User.fromJson(json as Map<String, dynamic>);
