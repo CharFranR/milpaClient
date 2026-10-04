@@ -30,3 +30,38 @@ class Conversation {
   final String? createdAt;
   final String? updatedAt;
 }
+
+class ChatMessage {
+  const ChatMessage({
+    required this.id,
+    required this.conversationId,
+    this.senderId,
+    required this.content,
+    required this.visibility,
+    this.createdAt,
+  });
+
+  factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
+    id: _stringOrEmpty(json['id']),
+    conversationId: _stringOrEmpty(json['conversation_id']),
+    senderId: _nullableString(json['sender_id']),
+    content: _stringOrEmpty(json['content']),
+    visibility: _boolOrDefault(json['visibility']),
+    createdAt: _nullableString(json['created_at']),
+  );
+
+  final String id;
+  final String conversationId;
+  final String? senderId;
+  final String content;
+  final bool visibility;
+  final String? createdAt;
+
+  bool get isFromSponsor => senderId == null;
+}
+
+String _stringOrEmpty(Object? value) => value is String ? value : '';
+
+String? _nullableString(Object? value) => value is String ? value : null;
+
+bool _boolOrDefault(Object? value) => value is bool ? value : false;
