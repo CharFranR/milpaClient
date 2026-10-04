@@ -149,7 +149,10 @@ class _RequestOffersPageState extends State<RequestOffersPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text('No se pudieron cargar las ofertas'),
-            TextButton(onPressed: () => _load(), child: const Text('Reintentar')),
+            TextButton(
+              onPressed: () => _load(),
+              child: const Text('Reintentar'),
+            ),
           ],
         ),
       );
@@ -255,6 +258,14 @@ class _RequestOffersPageState extends State<RequestOffersPage> {
               _StatusChip(status: offer.status),
             ],
           ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Text('Puntaje', style: AppText.body),
+              const SizedBox(width: AppSpacing.sm),
+              _Stars(value: prioritized.score, size: 16),
+            ],
+          ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Cantidad ofrecida: ${_quantity(offer.totalAmount)} ${offer.amountUnit.label}',
@@ -290,7 +301,10 @@ class _RequestOffersPageState extends State<RequestOffersPage> {
           ],
           if (prioritized.contributions.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
-            _Breakdown(contributions: prioritized.contributions),
+            _Breakdown(
+              contributions: prioritized.contributions,
+              hasDistance: prioritized.distanceKm != null,
+            ),
           ],
           const SizedBox(height: AppSpacing.sm),
           Row(
@@ -360,9 +374,10 @@ class _SwipeHint extends StatelessWidget {
 }
 
 class _Breakdown extends StatelessWidget {
-  const _Breakdown({required this.contributions});
+  const _Breakdown({required this.contributions, required this.hasDistance});
 
   final List<ScoreContribution> contributions;
+  final bool hasDistance;
 
   @override
   Widget build(BuildContext context) {
@@ -381,18 +396,48 @@ class _Breakdown extends StatelessWidget {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(contribution.label, style: AppText.bodySecondary),
+                        child: Text(
+                          contribution.label,
+                          style: AppText.bodySecondary,
+                        ),
                       ),
-                      Text(
-                        contribution.weightedScore.toStringAsFixed(2),
-                        style: AppText.label,
-                      ),
+                      if (!hasDistance && contribution.factor == 'distance')
+                        Text('Sin datos', style: AppText.bodySecondary)
+                      else
+                        _Stars(value: contribution.score),
                     ],
                   ),
                 ),
               )
               .toList(),
         ),
+      ),
+    );
+  }
+}
+
+class _Stars extends StatelessWidget {
+  const _Stars({required this.value, this.size = 14});
+
+  final double value;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final double stars = (value.clamp(0, 1) * 5 * 2).round() / 2;
+    return Semantics(
+      label: '${stars.toStringAsFixed(1)} de 5',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List<Widget>.generate(5, (int index) {
+          final int position = index + 1;
+          final IconData icon = stars >= position
+              ? Icons.star
+              : stars >= position - 0.5
+              ? Icons.star_half
+              : Icons.star_border;
+          return Icon(icon, size: size, color: AppColors.yelow);
+        }),
       ),
     );
   }
@@ -414,10 +459,8 @@ class _StatusChip extends StatelessWidget {
         AppColors.dark.withValues(alpha: 0.08),
         AppColors.dark,
       ),
-      OfferStatus.rejected || OfferStatus.withdrawn => (
-        Colors.red.withValues(alpha: 0.1),
-        Colors.red,
-      ),
+      OfferStatus.rejected ||
+      OfferStatus.withdrawn => (Colors.red.withValues(alpha: 0.1), Colors.red),
       OfferStatus.unknown => (
         AppColors.dark.withValues(alpha: 0.06),
         AppTints.secondary,

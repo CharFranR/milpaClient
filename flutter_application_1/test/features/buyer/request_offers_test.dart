@@ -145,7 +145,10 @@ void main() {
     await tester.pumpWidget(wrap(FakeMatchRepository()));
     await loadPage(tester);
 
-    expect(find.text('Todavía no hay ofertas para esta solicitud'), findsOneWidget);
+    expect(
+      find.text('Todavía no hay ofertas para esta solicitud'),
+      findsOneWidget,
+    );
     expect(
       find.text(
         'Cuando un agricultor ofrezca, la vas a ver acá para aceptarla o descartarla.',
@@ -254,6 +257,13 @@ void main() {
 
     expect(find.textContaining('km'), findsNothing);
     expect(find.text('Disponible: 120 kg'), findsOneWidget);
+
+    await tester.tap(find.text('Desglose del puntaje'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sin datos'), findsOneWidget);
+    expect(find.byIcon(Icons.star), findsNWidgets(8));
+    expect(find.byIcon(Icons.star_border), findsNWidgets(2));
   });
 
   testWidgets('a 409 on like shows the server message and refreshes', (
@@ -273,7 +283,7 @@ void main() {
     expect(find.text('La oferta ya no está disponible'), findsOneWidget);
   });
 
-  testWidgets('the breakdown expands with friendly Spanish labels', (
+  testWidgets('shows the score and its breakdown as stars', (
     WidgetTester tester,
   ) async {
     final FakeMatchRepository repository = FakeMatchRepository(
@@ -282,12 +292,20 @@ void main() {
 
     await tester.pumpWidget(wrap(repository));
     await loadPage(tester);
+
+    expect(find.text('Puntaje'), findsOneWidget);
+    expect(find.byIcon(Icons.star), findsNWidgets(3));
+    expect(find.byIcon(Icons.star_border), findsNWidgets(2));
+
     await tester.tap(find.text('Desglose del puntaje'));
     await tester.pumpAndSettle();
 
     expect(find.text('Distancia'), findsOneWidget);
     expect(find.text('Precio'), findsOneWidget);
-    expect(find.text('0.20'), findsOneWidget);
-    expect(find.text('0.15'), findsOneWidget);
+    expect(find.byIcon(Icons.star), findsNWidgets(11));
+    expect(find.byIcon(Icons.star_half), findsOneWidget);
+    expect(find.byIcon(Icons.star_border), findsNWidgets(3));
+    expect(find.text('0.20'), findsNothing);
+    expect(find.text('0.15'), findsNothing);
   });
 }
