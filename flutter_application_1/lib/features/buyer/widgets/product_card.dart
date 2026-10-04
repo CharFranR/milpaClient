@@ -1,13 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/features/buyer/mock_data.dart';
+import 'package:flutter_application_1/features/buyer/widgets/product_image.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
-/// Tarjeta de producto del catálogo del comprador.
 class ProductCard extends StatelessWidget {
-  const ProductCard({super.key, required this.product});
+  const ProductCard({
+    super.key,
+    required this.name,
+    required this.seller,
+    required this.priceText,
+    this.unit,
+    this.emoji = '🌿',
+    this.imageSrc,
+    this.badge,
+    this.onTap,
+  });
 
-  /// Producto que muestra la tarjeta.
-  final MockProduct product;
+  final String name;
+  final String seller;
+  final String priceText;
+  final String? unit;
+  final String emoji;
+  final String? imageSrc;
+  final String? badge;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +31,7 @@ class ProductCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () {},
+        onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
@@ -37,8 +52,10 @@ class ProductCard extends StatelessWidget {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      Text(product.emoji, style: const TextStyle(fontSize: 48)),
-                      if (product.badge != null)
+                      Positioned.fill(
+                        child: ProductImage(imageSrc: imageSrc, emoji: emoji),
+                      ),
+                      if (badge != null)
                         Positioned(
                           top: 8,
                           left: 8,
@@ -54,7 +71,7 @@ class ProductCard extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              product.badge!,
+                              badge!,
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
@@ -96,10 +113,10 @@ class ProductCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(product.seller, style: AppText.caption),
+                    Text(seller, style: AppText.caption),
                     const SizedBox(height: 2),
                     Text(
-                      product.name,
+                      name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppText.label,
@@ -109,15 +126,15 @@ class ProductCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          product.price,
+                          priceText,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: AppColors.blackGreen,
                           ),
                         ),
-                        const SizedBox(width: 3),
-                        Text(product.unit, style: AppText.caption),
+                        if (unit != null) const SizedBox(width: 3),
+                        if (unit != null) Text(unit!, style: AppText.caption),
                       ],
                     ),
                   ],
