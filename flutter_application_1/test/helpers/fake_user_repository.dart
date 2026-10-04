@@ -24,6 +24,8 @@ class FakeUserRepository extends UserRepository {
   int fetchCalls = 0;
   int updateCalls = 0;
   final Map<String, String> lastUpdate = <String, String>{};
+  double? lastUpdatedLatitude;
+  double? lastUpdatedLongitude;
 
   @override
   Future<User> fetchCurrent() async {
@@ -41,8 +43,12 @@ class FakeUserRepository extends UserRepository {
     String? address,
     String? department,
     String? municipality,
+    double? latitude,
+    double? longitude,
   }) async {
     updateCalls++;
+    lastUpdatedLatitude = latitude;
+    lastUpdatedLongitude = longitude;
     if (email != null) lastUpdate['email'] = email;
     if (firstName != null) lastUpdate['firstName'] = firstName;
     if (lastName != null) lastUpdate['lastName'] = lastName;

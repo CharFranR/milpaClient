@@ -28,6 +28,8 @@ class UserRepository {
     String? address,
     String? department,
     String? municipality,
+    double? latitude,
+    double? longitude,
   }) async {
     final String? userId = await _tokenStore.readUserId();
     final String? token = await _tokenStore.readToken();
@@ -42,6 +44,8 @@ class UserRepository {
       'address': ?address,
       'department': ?department,
       'municipality': ?municipality,
+      'latitude': ?latitude,
+      'longitude': ?longitude,
     };
     await _api.patch('/users/$userId', body: body, token: token);
     return fetchCurrent();

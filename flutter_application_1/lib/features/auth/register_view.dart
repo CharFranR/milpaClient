@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_1/core/api_exception.dart';
+import 'package:flutter_application_1/core/location_reporter.dart';
 import 'package:flutter_application_1/features/auth/register_models.dart';
 import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
@@ -19,7 +20,12 @@ const int _kPhoneMaxDigits = 15;
 
 /// Formulario de registro de Milpa.
 class RegisterView extends StatefulWidget {
-  const RegisterView({super.key});
+  const RegisterView({
+    super.key,
+    this.locationReporter = const DeviceLocationReporter(),
+  });
+
+  final LocationReporter locationReporter;
 
   @override
   State<RegisterView> createState() => _RegisterViewState();
@@ -37,6 +43,7 @@ class _RegisterViewState extends State<RegisterView> {
       TextEditingController();
   final TextEditingController _departmentController = TextEditingController();
   final TextEditingController _municipalityController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
 
   /// `null` significa "todavía no eligió". El botón de enviar permanece
   /// deshabilitado mientras esté en `null`.
@@ -44,6 +51,9 @@ class _RegisterViewState extends State<RegisterView> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isSubmitting = false;
+  bool _sharingLocation = false;
+  bool _locating = false;
+  Coordinates? _coordinates;
 
   static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
@@ -57,6 +67,7 @@ class _RegisterViewState extends State<RegisterView> {
     _confirmPasswordController.dispose();
     _departmentController.dispose();
     _municipalityController.dispose();
+    _addressController.dispose();
     super.dispose();
   }
 
@@ -87,6 +98,9 @@ class _RegisterViewState extends State<RegisterView> {
         confirmPassword: _confirmPasswordController.text,
         department: _departmentController.text.trim(),
         municipality: _municipalityController.text.trim(),
+        address: _addressController.text.trim(),
+        latitude: _coordinates?.latitude,
+        longitude: _coordinates?.longitude,
       );
       // Cierra el autofill para que el gestor de contraseñas del sistema pueda
       // guardar (o descartar) lo escrito.
@@ -343,8 +357,16 @@ class _RegisterViewState extends State<RegisterView> {
   // ───────────────────────── UBICACIÓN ─────────────────────────
 
   List<Widget> _locationSection(bool isWide) {
-    // Sin validadores: el backend acepta estas dos como texto libre y
+    // Sin validadores: el backend acepta estas tres como texto libre y
     // opcionales. No existe endpoint de catálogo de departamentos/municipios.
+    final Widget address = LabeledField(
+      label: 'Dirección',
+      hint: 'Ej. Barrio San Juan, casa 12',
+      controller: _addressController,
+      keyboardType: TextInputType.streetAddress,
+      textInputAction: TextInputAction.next,
+    );
+
     final Widget department = LabeledField(
       label: 'Departamento / Provincia',
       hint: 'Ej. Masaya',
@@ -364,9 +386,52 @@ class _RegisterViewState extends State<RegisterView> {
     return <Widget>[
       const Text('Ubicación', style: AppText.sectionTitle),
       const SizedBox(height: AppSpacing.sm),
+      address,
+      const SizedBox(height: AppSpacing.md),
       _pairedFields(isWide, department, municipality),
+      const SizedBox(height: AppSpacing.sm),
+      _locationSharingTile(),
       const SizedBox(height: AppSpacing.xl),
     ];
+  }
+
+  Widget _locationSharingTile() {
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      title: const Text('Compartir mi ubicación'),
+      subtitle: Text(
+        _locating
+            ? 'Obteniendo tu ubicación…'
+            : 'Opcional: nos ayuda a recomendarte productores cercanos',
+        style: AppText.caption,
+      ),
+      value: _sharingLocation,
+      activeThumbColor: AppColors.blackGreen,
+      onChanged: _locating ? null : _toggleLocationSharing,
+    );
+  }
+
+  Future<void> _toggleLocationSharing(bool value) async {
+    if (!value) {
+      setState(() {
+        _sharingLocation = false;
+        _coordinates = null;
+      });
+      return;
+    }
+
+    setState(() => _locating = true);
+    final Coordinates? coordinates = await widget.locationReporter.capture();
+    if (!mounted) return;
+
+    setState(() {
+      _locating = false;
+      _coordinates = coordinates;
+      _sharingLocation = coordinates != null;
+    });
+    if (coordinates == null) {
+      _showMessage('No pudimos obtener tu ubicación. Revisá los permisos.');
+    }
   }
 
   // ───────────────────────── ENVÍO ─────────────────────────

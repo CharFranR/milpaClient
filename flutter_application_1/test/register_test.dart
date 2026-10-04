@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:flutter_application_1/core/api_exception.dart';
+import 'package:flutter_application_1/core/location_reporter.dart';
 import 'package:flutter_application_1/features/auth/register_models.dart';
 import 'package:flutter_application_1/features/auth/register_view.dart';
 import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/ui/labeled_field.dart';
 
 import 'helpers/fake_auth_repository.dart';
+import 'helpers/fake_location_reporter.dart';
 import 'helpers/fake_user_repository.dart';
 
 Finder fieldWithLabel(String label) {
@@ -25,14 +27,22 @@ Finder get submitButton => find.widgetWithText(TextButton, 'Crear cuenta');
 bool submitEnabled(WidgetTester tester) =>
     tester.widget<TextButton>(submitButton).onPressed != null;
 
-Future<void> pumpRegister(WidgetTester tester, FakeAuthRepository fake) async {
+Future<void> pumpRegister(
+  WidgetTester tester,
+  FakeAuthRepository fake, {
+  LocationReporter? locationReporter,
+}) async {
   await tester.pumpWidget(
     SessionScope(
       controller: SessionController(
         authRepository: fake,
         userRepository: FakeUserRepository(),
       ),
-      child: const MaterialApp(home: RegisterView()),
+      child: MaterialApp(
+        home: RegisterView(
+          locationReporter: locationReporter ?? FakeLocationReporter(),
+        ),
+      ),
     ),
   );
   await tester.pump();
@@ -177,6 +187,60 @@ void main() {
       expect(fake.loginCalls, 1);
       expect(fake.lastRegisteredRole, 2);
       expect(fake.lastRegisteredEmail, 'juan@milpa.com');
+    });
+
+    testWidgets('el registro envía la dirección escrita', (
+      WidgetTester tester,
+    ) async {
+      final fake = FakeAuthRepository();
+      await pumpRegister(tester, fake);
+
+      await fillHappyPath(tester);
+      await tester.enterText(
+        fieldWithLabel('Dirección'),
+        'Barrio San Juan, casa 12',
+      );
+      await tapSubmit(tester);
+
+      expect(fake.lastRegisteredAddress, 'Barrio San Juan, casa 12');
+    });
+
+    testWidgets('sin compartir la ubicación no se envían coordenadas', (
+      WidgetTester tester,
+    ) async {
+      final fake = FakeAuthRepository();
+      final reporter = FakeLocationReporter(
+        result: const Coordinates(latitude: 12.1364, longitude: -86.2514),
+      );
+      await pumpRegister(tester, fake, locationReporter: reporter);
+
+      await fillHappyPath(tester);
+      await tapSubmit(tester);
+
+      expect(reporter.calls, 0);
+      expect(fake.lastRegisteredLatitude, isNull);
+      expect(fake.lastRegisteredLongitude, isNull);
+    });
+
+    testWidgets('compartir la ubicación envía las coordenadas capturadas', (
+      WidgetTester tester,
+    ) async {
+      final fake = FakeAuthRepository();
+      final reporter = FakeLocationReporter(
+        result: const Coordinates(latitude: 12.1364, longitude: -86.2514),
+      );
+      await pumpRegister(tester, fake, locationReporter: reporter);
+
+      await fillHappyPath(tester);
+      final Finder sharing = find.text('Compartir mi ubicación');
+      await tester.ensureVisible(sharing);
+      await tester.tap(sharing);
+      await tester.pumpAndSettle();
+      await tapSubmit(tester);
+
+      expect(reporter.calls, 1);
+      expect(fake.lastRegisteredLatitude, 12.1364);
+      expect(fake.lastRegisteredLongitude, -86.2514);
     });
 
     testWidgets('un 409 avisa que el correo ya está registrado', (

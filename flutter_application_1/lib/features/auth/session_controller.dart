@@ -49,6 +49,9 @@ class SessionController extends ChangeNotifier {
     required String confirmPassword,
     String department = '',
     String municipality = '',
+    String address = '',
+    double? latitude,
+    double? longitude,
   }) async {
     await _authRepository.register(
       email: email,
@@ -60,6 +63,9 @@ class SessionController extends ChangeNotifier {
       confirmPassword: confirmPassword,
       department: department,
       municipality: municipality,
+      address: address,
+      latitude: latitude,
+      longitude: longitude,
     );
     _user = await _authRepository.login(email: email, password: password);
     _authenticated = true;
@@ -94,6 +100,8 @@ class SessionController extends ChangeNotifier {
     String? address,
     String? department,
     String? municipality,
+    double? latitude,
+    double? longitude,
   }) async {
     _user = await _userRepository.updateCurrent(
       email: email,
@@ -103,6 +111,8 @@ class SessionController extends ChangeNotifier {
       address: address,
       department: department,
       municipality: municipality,
+      latitude: latitude,
+      longitude: longitude,
     );
     notifyListeners();
   }
