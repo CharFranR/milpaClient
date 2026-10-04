@@ -40,15 +40,17 @@
 
 - [x] **T7** — Capa de catálogo: modelos (`CatalogItem`, `CatalogPage`, `CatalogCategory`, `CatalogSort`) + `CatalogRepository` (`GET /search`, `GET /categories`) + tests con `MockClient`.
 - [x] **T8** — Explorar real: buscador con debounce, chips desde `GET /categories`, grilla desde `GET /search`, imágenes de red con fallback al emoji, conteo de resultados, orden (relevancia / precio asc-desc), paginación ("Cargar más") y estados de carga/error/vacío + widget tests.
-- [ ] **T9** — Detalle de oferta (pantalla nueva): `GET /offerings/{id}` + vendedor + `GET /reviews/average` + "Chatear" (`POST /conversations`).
+- [x] **T9** — Detalle de oferta (pantalla nueva): `GET /offerings/{id}` + vendedor + `GET /reviews/average` + "Chatear" (`POST /conversations`).
 - [ ] **T10** — Conversaciones: `GET /conversations`; chat con `GET/POST /messages` + WebSocket `/ws/{id}` (`web_socket_channel`; subprotocolo `milpa.chat.v1` + `bearer.<JWT>`; aviso de sponsor sin `sender_id`).
 
-**Decisiones de alcance (T7–T8):**
+**Decisiones de alcance (T7–T9):**
 
 - No hay list-all de ofertas: el catálogo es `GET /search` sin término (público); `page` 1-based, `page_size` 20 (default del server, máx 100).
 - `image_url` guarda `uploads/<archivo>`: el cliente arma `{base}/images/<archivo>` con el último segmento; si viene URL absoluta se usa tal cual; fallback de UI al emoji.
 - Filtros avanzados (departamento, rango de precio) diferidos; las píldoras muertas del mock se reemplazan por orden real (Relevancia / Precio).
 - Paginación con botón "Cargar más"; sin pull-to-refresh.
+- T9: "Chatear" crea la conversación real (`POST /conversations`) y confirma en pantalla; el historial y la navegación al chat llegan en T10. El server no deduplica conversaciones: T10 reutilizará la existente del mismo par (`GET /conversations`) antes de crear.
+- `GET /offerings/{id}` devuelve `type` numérico (0 producto, 1 servicio) y campos extra; el detalle usa `id`/`user_id`/`type`/`name`/`description`/`price`/`image_url`.
 
 **Server (para que la etapa sea demostrable):**
 
@@ -91,3 +93,4 @@
 - 2026-10-03: Etapa 2 planificada (T7–T10) y rama `feat/catalog-chat` creada. Arranca T7 (capa de catálogo) y T8 (Explorar real). Contrato re-verificado contra el server: search público 1-based (`page_size` default 20, máx 100), `image_url` = `uploads/<archivo>` con lectura pública en `/images/<archivo>`, categorías reales Frutales/Cítricos/Otros.
 - 2026-10-03: T7 completada — `catalog_models.dart` (CatalogSort con wire values, CatalogCategory, CatalogItem con `imageSrc` resuelto y `formatPrice`), `catalog_repository.dart` (`search` con query params y `fetchCategories`) y 14 tests con `MockClient`; RED observado (clases inexistentes) → GREEN; 56 tests verdes, analyze limpio, cero comentarios. Commit `03abcf3`. Siguiente: T8 (Explorar real).
 - 2026-10-03: T8 completada — Explore 100% real: carga inicial en paralelo (categorías + search), chips desde `/categories`, buscador con debounce 400 ms y submit, orden Relevancia/Precio (asc↔desc con flecha), conteo desde `total_hits`, grilla con `ProductCard` desacoplada del mock (imagen de red con fallback al emoji, badge "Verificado"), "Cargar más" paginado, estados de carga/error/vacío; `SearchField` con `onChanged`/`onSubmitted`; 10 widget tests nuevos; 66 tests verdes, analyze limpio, cero comentarios. Commit `897f6df`. Siguiente: T9 (detalle de oferta + Chatear).
+- 2026-10-03: T9 completada — Detalle de oferta real: `OfferingRepository` (`GET /offerings/{id}`, `GET /users/{id}`, `GET /reviews/average?target_type=user`), `ConversationRepository.start` (`POST /conversations` con Bearer y token faltante → 401), `resolveImageSrc` extraído a `lib/core/image_url.dart`, pantalla `OfferingDetailPage` (imagen con fallback, tipo Producto/Servicio, precio, descripción, card del vendedor con ubicación, estrellas y "Sin reseñas", "Chatear" con confirmación/errores), `ProductImage` compartido y tarjetas de Explorar navegables; 89 tests verdes, analyze limpio, cero comentarios. Commits `1f0958c` y `c98d28d`. Nota: "Chatear" crea la conversación real y confirma en pantalla; la navegación y el historial llegan en T10 (el server no deduplica, T10 reutilizará la existente). Siguiente: T10 (conversaciones + chat en vivo).
