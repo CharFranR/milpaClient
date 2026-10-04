@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/core/token_store.dart';
 import 'package:flutter_application_1/features/buyer/catalog_models.dart';
+import 'package:flutter_application_1/features/buyer/chat.dart';
+import 'package:flutter_application_1/features/buyer/conversation_models.dart';
 import 'package:flutter_application_1/features/buyer/conversation_repository.dart';
 import 'package:flutter_application_1/features/buyer/offering_models.dart';
 import 'package:flutter_application_1/features/buyer/offering_repository.dart';
@@ -79,17 +81,36 @@ class _OfferingDetailPageState extends State<OfferingDetailPage> {
     _load();
   }
 
-  Future<void> _startConversation() async {
+  Future<void> _openConversation() async {
     final SellerProfile? seller = _seller;
     if (_sending || _detail == null || seller == null) return;
     setState(() => _sending = true);
     try {
-      await _conversationRepository.start(
-        farmerId: seller.id,
-        offeringId: widget.offeringId,
-      );
+      final List<Conversation> conversations = await _conversationRepository
+          .fetchAll();
+      Conversation? existing;
+      for (final Conversation conversation in conversations) {
+        if (conversation.offeringId == widget.offeringId &&
+            conversation.farmerId == seller.id) {
+          existing = conversation;
+          break;
+        }
+      }
+      final Conversation conversation =
+          existing ??
+          await _conversationRepository.start(
+            farmerId: seller.id,
+            offeringId: widget.offeringId,
+          );
       if (!mounted) return;
-      _showMessage('Conversación creada');
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => BuyerChat(
+            conversationId: conversation.id,
+            counterpartName: seller.fullName,
+          ),
+        ),
+      );
     } catch (_) {
       if (!mounted) return;
       _showMessage('No se pudo iniciar la conversación');
@@ -152,7 +173,7 @@ class _OfferingDetailPageState extends State<OfferingDetailPage> {
           child: SizedBox(
             height: 52,
             child: TextButton(
-              onPressed: _canChat ? _startConversation : null,
+              onPressed: _canChat ? _openConversation : null,
               style: TextButton.styleFrom(
                 backgroundColor: AppColors.blackGreen,
                 disabledBackgroundColor: AppColors.dark.withValues(alpha: 0.12),

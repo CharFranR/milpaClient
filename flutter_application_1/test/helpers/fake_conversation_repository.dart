@@ -12,6 +12,22 @@ class FakeConversationRepository extends ConversationRepository {
   String? lastFarmerId;
   String? lastOfferingId;
 
+  List<Conversation> conversations = <Conversation>[];
+  Object? fetchAllError;
+  int fetchAllCalls = 0;
+
+  final Map<String, List<ChatMessage>> messagesByConversation =
+      <String, List<ChatMessage>>{};
+  Object? fetchMessagesError;
+  Set<String> messageErrorConversationIds = <String>{};
+  int fetchMessagesCalls = 0;
+  String? lastFetchedConversationId;
+
+  Object? sendMessageError;
+  int sendMessageCalls = 0;
+  String? lastSendConversationId;
+  String? lastSendContent;
+
   @override
   Future<Conversation> start({
     required String farmerId,
@@ -29,5 +45,37 @@ class FakeConversationRepository extends ConversationRepository {
       offeringId: offeringId,
       visibility: true,
     );
+  }
+
+  @override
+  Future<List<Conversation>> fetchAll() async {
+    fetchAllCalls++;
+    final Object? error = fetchAllError;
+    if (error != null) throw error;
+    return conversations;
+  }
+
+  @override
+  Future<List<ChatMessage>> fetchMessages(String conversationId) async {
+    fetchMessagesCalls++;
+    lastFetchedConversationId = conversationId;
+    if (messageErrorConversationIds.contains(conversationId)) {
+      throw Exception('sin mensajes');
+    }
+    final Object? error = fetchMessagesError;
+    if (error != null) throw error;
+    return messagesByConversation[conversationId] ?? <ChatMessage>[];
+  }
+
+  @override
+  Future<void> sendMessage({
+    required String conversationId,
+    required String content,
+  }) async {
+    sendMessageCalls++;
+    lastSendConversationId = conversationId;
+    lastSendContent = content;
+    final Object? error = sendMessageError;
+    if (error != null) throw error;
   }
 }

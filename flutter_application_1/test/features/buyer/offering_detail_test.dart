@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:flutter_application_1/features/buyer/chat.dart';
+import 'package:flutter_application_1/features/buyer/conversation_models.dart';
 import 'package:flutter_application_1/features/buyer/offering_detail.dart';
 import 'package:flutter_application_1/features/buyer/offering_models.dart';
 
@@ -19,6 +22,24 @@ Widget wrap({
 );
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  const MethodChannel secureStorageChannel = MethodChannel(
+    'plugins.it_nomads.com/flutter_secure_storage',
+  );
+
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          secureStorageChannel,
+          (MethodCall call) async => null,
+        );
+  });
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(secureStorageChannel, null);
+  });
+
   testWidgets('carga y muestra nombre, precio, vendedor, ubicación y reseñas', (
     WidgetTester tester,
   ) async {
@@ -111,6 +132,35 @@ void main() {
     expect(offerings.detailCalls, 2);
   });
 
+  testWidgets('Chatear reutiliza la conversación existente y navega al chat', (
+    WidgetTester tester,
+  ) async {
+    final offerings = FakeOfferingRepository();
+    final conversations = FakeConversationRepository()
+      ..conversations = <Conversation>[
+        const Conversation(
+          id: 'conversation-9',
+          farmerId: 'farmer-1',
+          buyerId: 'buyer-1',
+          offeringId: 'offering-1',
+          visibility: true,
+        ),
+      ];
+
+    await tester.pumpWidget(
+      wrap(offerings: offerings, conversations: conversations),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Chatear'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(conversations.fetchAllCalls, 1);
+    expect(conversations.startCalls, 0);
+    expect(find.byType(BuyerChat), findsOneWidget);
+  });
+
   testWidgets('Chatear inicia la conversación con vendedor y oferta', (
     WidgetTester tester,
   ) async {
@@ -124,14 +174,13 @@ void main() {
 
     await tester.tap(find.text('Chatear'));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
+    expect(conversations.fetchAllCalls, 1);
     expect(conversations.startCalls, 1);
     expect(conversations.lastFarmerId, 'farmer-1');
     expect(conversations.lastOfferingId, 'offering-1');
-    expect(find.text('Conversación creada'), findsOneWidget);
-
-    await tester.pump(const Duration(seconds: 5));
-    await tester.pump();
+    expect(find.byType(BuyerChat), findsOneWidget);
   });
 
   testWidgets('Chatear falla y muestra el mensaje de error', (
@@ -150,6 +199,7 @@ void main() {
     await tester.pump();
 
     expect(conversations.startCalls, 1);
+    expect(find.byType(BuyerChat), findsNothing);
     expect(find.text('No se pudo iniciar la conversación'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 5));
