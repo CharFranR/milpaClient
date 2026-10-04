@@ -3,6 +3,8 @@ import 'package:flutter_application_1/features/buyer/explore.dart';
 import 'package:flutter_application_1/features/buyer/home.dart';
 import 'package:flutter_application_1/features/buyer/messages.dart';
 import 'package:flutter_application_1/features/buyer/profile.dart';
+import 'package:flutter_application_1/features/buyer/supply_requests.dart';
+import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
 /// Contenedor del comprador: páginas con barra inferior y FAB central.
@@ -15,6 +17,16 @@ class BuyerLayout extends StatefulWidget {
 
 class _BuyerLayoutState extends State<BuyerLayout> {
   int _currentIndex = 0;
+  bool _requestedLoad = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_requestedLoad) {
+      _requestedLoad = true;
+      SessionScope.of(context).loadUser();
+    }
+  }
 
   static const List<Widget> _pages = [
     BuyerHome(),
@@ -30,14 +42,21 @@ class _BuyerLayoutState extends State<BuyerLayout> {
     return Scaffold(
       backgroundColor: AppColors.whitemodeBackgrund,
       body: _pages[_currentIndex],
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: AppColors.blackGreen,
-        foregroundColor: Colors.white,
-        shape: const CircleBorder(),
-        elevation: 2,
-        child: const Icon(Icons.add, size: 28),
-      ),
+      floatingActionButton:
+          canPublishSupplyRequests(SessionScope.of(context).user?.role)
+          ? FloatingActionButton(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const SupplyRequestsPage(),
+                ),
+              ),
+              backgroundColor: AppColors.blackGreen,
+              foregroundColor: Colors.white,
+              shape: const CircleBorder(),
+              elevation: 2,
+              child: const Icon(Icons.add, size: 28),
+            )
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: BottomAppBar(
         color: Colors.white,

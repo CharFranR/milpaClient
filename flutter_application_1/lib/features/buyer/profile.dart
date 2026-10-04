@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_application_1/core/models/auth_models.dart';
 import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/features/buyer/edit_profile.dart';
+import 'package:flutter_application_1/features/buyer/supply_requests.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
 const Color _sectionAccent = Color(0xff2563eb);
@@ -92,6 +93,26 @@ class _BuyerProfileState extends State<BuyerProfile> {
               _ProfileRowData(title: 'Idioma', value: 'Español'),
             ],
           ),
+          if (canPublishSupplyRequests(user.role)) ...[
+            const SizedBox(height: AppSpacing.xl),
+            const _SectionHeader(
+              icon: Icons.receipt_long,
+              label: 'COMPRAS MAYORISTAS',
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _InfoCard(
+              rows: [
+                _ProfileRowData(
+                  title: 'Mis solicitudes',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const SupplyRequestsPage(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: AppSpacing.xl),
           const _SectionHeader(icon: Icons.lock_outline, label: 'SEGURIDAD'),
           const SizedBox(height: AppSpacing.md),
