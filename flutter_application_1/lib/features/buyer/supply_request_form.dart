@@ -34,7 +34,8 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
   late final TextEditingController _municipalityController;
   late final TextEditingController _addressController;
 
-  late MeasureUnit _unit;
+  late MeasureUnit _amountUnit;
+  late MeasureUnit _unitOfMeasure;
   late DateTime _requestDeadline;
   late DateTime _deliveryDeadline;
   late bool _multipleProviders;
@@ -58,11 +59,12 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
     _departmentController = TextEditingController(text: draft.department);
     _municipalityController = TextEditingController(text: draft.municipality);
     _addressController = TextEditingController(text: draft.addressLine);
-    _unit = draft.amountUnit == MeasureUnit.unknown
-        ? (draft.unitOfMeasure == MeasureUnit.unknown
-              ? MeasureUnit.kilogram
-              : draft.unitOfMeasure)
+    _amountUnit = draft.amountUnit == MeasureUnit.unknown
+        ? MeasureUnit.kilogram
         : draft.amountUnit;
+    _unitOfMeasure = draft.unitOfMeasure == MeasureUnit.unknown
+        ? MeasureUnit.kilogram
+        : draft.unitOfMeasure;
     final DateTime today = DateUtils.dateOnly(DateTime.now());
     _requestDeadline =
         draft.requestDeadline ?? today.add(const Duration(days: 30));
@@ -171,10 +173,10 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
       description: _descriptionController.text.trim(),
       totalAmount: _parseNumber(_totalAmountController.text),
       actualAmount: widget.request?.actualAmount ?? 0,
-      amountUnit: _unit,
+      amountUnit: _amountUnit,
       numberOfUnits: _parseNumber(_numberOfUnitsController.text),
       amountPerUnit: _parseNumber(_amountPerUnitController.text),
-      unitOfMeasure: _unit,
+      unitOfMeasure: _unitOfMeasure,
       department: _departmentController.text.trim(),
       municipality: _municipalityController.text.trim(),
       addressLine: _addressController.text.trim(),
@@ -257,7 +259,7 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
                 const SizedBox(height: AppSpacing.md),
                 LabeledField(
                   label: 'Cantidad total',
-                  hint: 'Ej. 800',
+                  hint: 'Ej. 500',
                   controller: _totalAmountController,
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.next,
@@ -265,9 +267,17 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
                       _positive(value, 'cantidad total'),
                 ),
                 const SizedBox(height: AppSpacing.md),
+                _unitSelector(
+                  label: 'Unidad de la cantidad total',
+                  selected: _amountUnit,
+                  onSelectionChanged: (MeasureUnit value) {
+                    setState(() => _amountUnit = value);
+                  },
+                ),
+                const SizedBox(height: AppSpacing.md),
                 LabeledField(
                   label: 'Cantidad de unidades',
-                  hint: 'Ej. 100',
+                  hint: 'Ej. 100 costales',
                   controller: _numberOfUnitsController,
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.next,
@@ -276,37 +286,20 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 LabeledField(
-                  label: 'Precio por unidad',
-                  hint: 'Ej. 8,50',
+                  label: 'Cantidad por unidad',
+                  hint: 'Ej. 50',
                   controller: _amountPerUnitController,
                   keyboardType: TextInputType.number,
                   textInputAction: TextInputAction.next,
                   validator: (String? value) =>
-                      _positive(value, 'precio por unidad'),
+                      _positive(value, 'cantidad por unidad'),
                 ),
-                const SizedBox(height: AppSpacing.lg),
-                Text('Unidad de medida', style: AppText.fieldLabel),
-                const SizedBox(height: AppSpacing.sm),
-                SegmentedButton<MeasureUnit>(
-                  segments: const <ButtonSegment<MeasureUnit>>[
-                    ButtonSegment<MeasureUnit>(
-                      value: MeasureUnit.kilogram,
-                      label: Text('kg'),
-                    ),
-                    ButtonSegment<MeasureUnit>(
-                      value: MeasureUnit.pound,
-                      label: Text('lb'),
-                    ),
-                    ButtonSegment<MeasureUnit>(
-                      value: MeasureUnit.ton,
-                      label: Text('ton'),
-                    ),
-                  ],
-                  selected: <MeasureUnit>{_unit},
-                  onSelectionChanged: (Set<MeasureUnit> selected) {
-                    if (selected.isNotEmpty) {
-                      setState(() => _unit = selected.first);
-                    }
+                const SizedBox(height: AppSpacing.md),
+                _unitSelector(
+                  label: 'Unidad de cada unidad de entrega',
+                  selected: _unitOfMeasure,
+                  onSelectionChanged: (MeasureUnit value) {
+                    setState(() => _unitOfMeasure = value);
                   },
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -369,7 +362,7 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
                 if (_multipleProviders) ...[
                   const SizedBox(height: AppSpacing.sm),
                   LabeledField(
-                    label: 'Monto mínimo por proveedor',
+                    label: 'Cantidad mínima por proveedor',
                     hint: 'Opcional',
                     controller: _minAmountController,
                     keyboardType: TextInputType.number,
@@ -414,6 +407,40 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _unitSelector({
+    required String label,
+    required MeasureUnit selected,
+    required ValueChanged<MeasureUnit> onSelectionChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(label, style: AppText.fieldLabel),
+        const SizedBox(height: AppSpacing.sm),
+        SegmentedButton<MeasureUnit>(
+          segments: const <ButtonSegment<MeasureUnit>>[
+            ButtonSegment<MeasureUnit>(
+              value: MeasureUnit.kilogram,
+              label: Text('kg'),
+            ),
+            ButtonSegment<MeasureUnit>(
+              value: MeasureUnit.pound,
+              label: Text('lb'),
+            ),
+            ButtonSegment<MeasureUnit>(
+              value: MeasureUnit.ton,
+              label: Text('ton'),
+            ),
+          ],
+          selected: <MeasureUnit>{selected},
+          onSelectionChanged: (Set<MeasureUnit> values) {
+            if (values.isNotEmpty) onSelectionChanged(values.first);
+          },
+        ),
+      ],
     );
   }
 

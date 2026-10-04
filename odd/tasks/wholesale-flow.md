@@ -32,11 +32,32 @@
 
 ## Decisiones de C2
 
-- **Un solo selector de unidad.** El server usa el mismo enum entero para `amount_unit` y `unit_of_measure`, así que la UI expone una sola elección (kg / lb / ton) y la manda en los dos campos. Dos selectores distintos prometerían una distinción que el contrato no tiene.
+- ~~**Un solo selector de unidad.**~~ **SUPERSEDIDA (ver C3).** El tipo de enum es el mismo, pero el significado no: `amount_unit` es la unidad de la cantidad total y `unit_of_measure` la unidad de cada unidad de entrega. Colapsarlos en un selector mandaba la misma unidad a los dos campos, y la lista además mostraba el total con `unit_of_measure`.
 - **El formulario no depende de `SessionScope`.** No precarga departamento/municipio/dirección desde el perfil: se mantiene testeable con solo el repositorio inyectado, como `BuyerExplore` y `OfferingDetailPage`. Precargar queda como mejora.
 - **El `BuyerLayout` pide el usuario una vez.** `SessionController.restore()` no carga el usuario: después de un arranque en frío `user` es null hasta que alguien lo pide (hoy lo hace solo el perfil al abrirse). Sin ese `loadUser()` el FAB no aparecería para un mayorista que nunca entra a Perfil. El pedido va guardado con bandera en `didChangeDependencies`, igual que en `profile.dart`.
 - **Fechas siempre presentes.** Al crear, los dos plazos arrancan en hoy+30 y hoy+60 días y se pueden cambiar con el selector de fecha; nunca se manda `null`, para no depender del manejo de fecha cero del server.
 - **El FAB abre la lista, no el formulario.** El roadmap decía "FAB central como 'Nueva solicitud'"; abrir la lista (con la acción "Nueva solicitud" arriba y editar/cancelar por fila) deja el ciclo completo a un toque y evita una pantalla huérfana. Desvío consciente del texto del roadmap.
+
+## Corrección de semántica (C3)
+
+**Origen:** hallazgo del usuario en la prueba e2e del teléfono. En el request **no hay dinero en ningún campo**: `total_amount`, `actual_amount`, `amount_per_unit` y `min_amount_per_provider` son cantidades (migración `000016`, `DOUBLE PRECISION`; `validateOfferAgainstRequest` compara `min_amount_per_provider` contra el `total_amount` de la oferta, que también es cantidad). El dinero vive en la oferta (`price_per_unit`): el comprador pide cantidad y el agricultor cotiza.
+
+**Semántica confirmada por el usuario:** `total_amount` + `amount_unit` = cantidad total pedida (500 lb de maíz); `number_of_units` = en cuántas unidades se espera la entrega (100 costales); `amount_per_unit` + `unit_of_measure` = cuánto trae cada unidad (50 lb por costal).
+
+**Decisiones del usuario:** dos selectores de unidad, fieles al DTO; **sin** campo de dinero en el request; **sin** validar la relación `total = unidades × cantidad por unidad` (el server tampoco la exige).
+
+**Defectos introducidos en C2 a corregir:**
+
+1. `amount_per_unit` y `min_amount_per_provider` rotulados como dinero ('Precio por unidad', 'Monto mínimo por proveedor') y renderizados con `formatPrice`.
+2. Un solo selector de unidad para los dos campos, y la lista mostrando el total con `unitOfMeasure` en vez de `amountUnit`.
+3. `Restante` y `comprometido` invertidos: `actual_amount` es lo **disponible** y `total − actual` lo **comprometido** (verificado: tras un match, `actual_amount` bajó de 500 a 300 con match de 200). Ninguna prueba lo cubría.
+4. `requestedAmount` es un nombre engañoso para lo comprometido → `committedAmount`.
+
+- [x] **C3 — Semántica de cantidades y dos unidades (cliente).** Formulario con dos selectores ('Unidad de la cantidad total' → `amountUnit`; 'Unidad de cada unidad de entrega' → `unitOfMeasure`) y rótulos de cantidades sin lenguaje de dinero; lista sin `formatPrice`, con la unidad correcta por línea y `Disponible`/`Comprometido` bien asignados; rename del getter a `committedAmount`; tests actualizados y cobertura nueva para los dos selectores y para la línea disponible/comprometido.
+
+**Nota de proceso:** la decisión de C2 de colapsar los dos campos de unidad fue un error de diseño por asumir que dos campos del DTO con el mismo tipo comparten significado. Los nombres del DTO no alcanzan para inferir semántica.
+
+**Hueco de cobertura conocido:** el test de edición no afirma que los dos selectores muestren su valor sembrado independiente (la siembra por campo está verificada por inspección en `supply_request_form.dart:62-67`). Es la primera aserción a agregar si se retoca este formulario.
 
 ## Hallazgos
 
@@ -79,3 +100,4 @@ Quirks del contrato que la capa de datos tiene que respetar (no son bugs, son el
 - 2026-10-04: **C2 completada** — `supply_requests.dart` (lista + `canPublishSupplyRequests`), `supply_request_form.dart` (alta/edición), FAB gateado en `layout/buyer.dart`, sección "COMPRAS MAYORISTAS" en `profile.dart` y 18 widget tests. Evidencia: `flutter analyze` limpio, 18 tests focalizados verdes, 159 en la suite. Verificación independiente en dos pasadas: la primera pasó pero marcó tres huecos de cobertura (fallo de edición, rechazo de fecha límite posterior a la entrega, conteo de `cancelCalls`), cerrados con tres tests más y re-verificados (incluida la interacción real con el date picker).
 
 **Riesgo de revisión:** C2 es un commit grande (dos pantallas nuevas, dos archivos existentes y ~600 líneas con tests). Si se abre PR, conviene partirlo o revisarlo por archivo.
+- 2026-10-04: **C3 completada** — corrección de semántica pedida por el usuario tras la prueba e2e. Dos selectores de unidad independientes (`Unidad de la cantidad total` → `amountUnit`; `Unidad de cada unidad de entrega` → `unitOfMeasure`), cero lenguaje de dinero en las dos pantallas (`formatPrice` y el import de `catalog_models.dart` eliminados), unidad correcta por línea en la tarjeta, `Disponible`/`Comprometido` con la aritmética real (`actualAmount` vs `total − actual`) y rename `requestedAmount` → `committedAmount`. El usuario confirmó la semántica: `total_amount` es todo lo que quiere comprar y `actual_amount` lo que le falta acordar. Evidencia: `flutter analyze` limpio, 37 tests focalizados verdes, 162 en la suite, cero comentarios agregados. Verificación independiente: las 9 claims PASS, y el diff contra `e3a9493` confirma que ninguna aserción se borró sin reemplazo equivalente (solo cambios de copy, de número y de nombre del getter).

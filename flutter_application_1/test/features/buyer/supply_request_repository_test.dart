@@ -250,7 +250,7 @@ void main() {
         },
       });
 
-      expect(request.requestedAmount, 500);
+      expect(request.committedAmount, 500);
       expect(request.location, 'Masate, Masaya');
       expect(request.isOpen, isTrue);
     });
@@ -260,7 +260,7 @@ void main() {
         <String, dynamic>{'id': 'request-2', 'actual_amount': 300},
       );
 
-      expect(request.requestedAmount, 0);
+      expect(request.committedAmount, 0);
       expect(request.location, '');
       expect(request.isOpen, isFalse);
     });

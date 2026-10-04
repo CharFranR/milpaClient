@@ -122,7 +122,7 @@ class SupplyRequest {
 
   bool get isOpen => status.isEditable;
 
-  double get requestedAmount =>
+  double get committedAmount =>
       (totalAmount - actualAmount).clamp(0, double.infinity).toDouble();
 
   String get location =>

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/core/token_store.dart';
-import 'package:flutter_application_1/features/buyer/catalog_models.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_form.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_models.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_repository.dart';
@@ -222,7 +221,7 @@ class _SupplyRequestsPageState extends State<SupplyRequestsPage> {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            '${formatPrice(request.totalAmount)} · ${request.unitOfMeasure.label}',
+            '${_quantity(request.totalAmount)} ${request.amountUnit.label}',
             style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w700,
@@ -230,10 +229,10 @@ class _SupplyRequestsPageState extends State<SupplyRequestsPage> {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          if (request.requestedAmount > 0 || request.actualAmount > 0)
+          if (request.committedAmount > 0 || request.actualAmount > 0)
             Text(
-              'Restante: ${formatPrice(request.requestedAmount)} · '
-              'comprometido: ${formatPrice(request.actualAmount)}',
+              'Disponible: ${_quantity(request.actualAmount)} ${request.amountUnit.label} · '
+              'Comprometido: ${_quantity(request.committedAmount)} ${request.amountUnit.label}',
               style: AppText.body,
             ),
           if (request.numberOfUnits > 0 || request.amountPerUnit > 0) ...[
@@ -241,7 +240,7 @@ class _SupplyRequestsPageState extends State<SupplyRequestsPage> {
             Text(
               '${request.numberOfUnits > 0 ? 'Unidades: ${_quantity(request.numberOfUnits)}' : ''}'
               '${request.numberOfUnits > 0 && request.amountPerUnit > 0 ? ' · ' : ''}'
-              '${request.amountPerUnit > 0 ? 'Precio por unidad: ${formatPrice(request.amountPerUnit)}' : ''}',
+              '${request.amountPerUnit > 0 ? 'Cantidad por unidad: ${_quantity(request.amountPerUnit)} ${request.unitOfMeasure.label}' : ''}',
               style: AppText.body,
             ),
           ],
@@ -274,9 +273,9 @@ class _SupplyRequestsPageState extends State<SupplyRequestsPage> {
           if (request.minAmountPerProvider > 0) ...[
             const SizedBox(height: AppSpacing.xs),
             _DetailLine(
-              icon: Icons.payments_outlined,
+              icon: Icons.scale_outlined,
               text:
-                  'Mínimo por proveedor: ${formatPrice(request.minAmountPerProvider)}',
+                  'Mínimo por proveedor: ${_quantity(request.minAmountPerProvider)} ${request.amountUnit.label}',
             ),
           ],
           if (request.isOpen) ...[
