@@ -62,6 +62,8 @@
 - [x] Seed de datos: `make seed` (servicio compose `seed`, profile tools) — agricultor `finca.elroble@milpa.com` con dirección completa, 8 ofertas por categoría + 4 inventarios, indexados a ES; idempotente. Validado en vivo (T11).
 - [x] `API.md` al día: el drift de search/`UserDTO`/`phone_number` ya estaba corregido; la fila de `POST /offerings/` se corrigió con el contrato real (T12).
 
+**Estado de la Etapa 2: CERRADA ✅ (2026-10-04) — validación manual e2e del usuario en el teléfono OK.**
+
 ## Etapa 3 — Mayorista + Transacciones + Liquidaciones (roadmap)
 
 **Cliente:**
@@ -103,3 +105,4 @@
 - 2026-10-04: T11 completada (server) — `server/cmd/seed` in-process (wiring espejo de `cmd/api`, corre migraciones y `EnsureIndex`, usa los use cases reales → indexa ES e invalida caché); agricultor `finca.elroble@milpa.com` (dirección completa) + 8 ofertas (Frutales 2 / Cítricos 3 / Otros 3) + 4 inventarios; idempotente; servicio compose `seed` (profile tools) + `make seed`; Dockerfile construye `./seed`. Validación en vivo: build+up+seed OK; `/search` → 8 resultados con `farmer_name` "María López"; filtro `category_id` → 2/3/3; rerun → `offerings_skipped=8` y total sin cambios; `availability` de "Tomate cherry" → 120 con token del agricultor. Commit `4479b87`.
 - 2026-10-04: T12 completada (API.md) — el drift ya estaba corregido en `97d04e0` (search con `category_id`, `UserDTO` con `address_line`, `phone_number` obligatorio); se corrigió la fila de `POST /offerings/` (requeridos reales: `variety`/`unit_of_measure_id`/`quantity_available`/`category_id`; `type` 1 rechazado; dirección completa obligatoria; opcionales documentados). Commit `4e989a5`.
 - 2026-10-04: **Bloque server de la Etapa 2 completo.** El docker local queda arriba y con datos (`make seed`); falta la prueba manual en el teléfono (adb reverse) para cerrar la etapa.
+- 2026-10-04: **ETAPA 2 CERRADA ✅** — el usuario validó la pasada e2e manual en el teléfono contra el docker local seedeado: todo OK. Delivery pendiente (decisión del usuario): push/PR de `feat/catalog-chat` y de los 2 commits del server en `develop`. Siguiente: **Etapa 3** (mayorista + transacciones + reseñas + liquidaciones + reportes).
