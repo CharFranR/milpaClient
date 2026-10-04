@@ -9,6 +9,8 @@ import 'package:flutter_application_1/features/buyer/conversation_models.dart';
 import 'package:flutter_application_1/features/buyer/conversation_repository.dart';
 import 'package:flutter_application_1/features/buyer/offering_models.dart';
 import 'package:flutter_application_1/features/buyer/offering_repository.dart';
+import 'package:flutter_application_1/features/buyer/report_dialog.dart';
+import 'package:flutter_application_1/features/buyer/report_repository.dart';
 import 'package:flutter_application_1/features/buyer/widgets/product_image.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
@@ -18,11 +20,13 @@ class OfferingDetailPage extends StatefulWidget {
     required this.offeringId,
     this.offeringRepository,
     this.conversationRepository,
+    this.reportRepository,
   });
 
   final String offeringId;
   final OfferingRepository? offeringRepository;
   final ConversationRepository? conversationRepository;
+  final ReportRepository? reportRepository;
 
   @override
   State<OfferingDetailPage> createState() => _OfferingDetailPageState();
@@ -125,6 +129,25 @@ class _OfferingDetailPageState extends State<OfferingDetailPage> {
       ..showSnackBar(SnackBar(content: Text(text)));
   }
 
+  Future<void> _openReport() async {
+    final ({String targetType, String targetId})? target =
+        await showModalBottomSheet<({String targetType, String targetId})>(
+          context: context,
+          builder: (_) => _ReportOptionsSheet(
+            offeringId: widget.offeringId,
+            sellerId: _seller?.id,
+            offeringRepository: _offeringRepository,
+          ),
+        );
+    if (target == null || !mounted) return;
+    await showReportDialog(
+      context: context,
+      targetType: target.targetType,
+      targetId: target.targetId,
+      repository: widget.reportRepository,
+    );
+  }
+
   bool get _canChat =>
       !_sending && _detail != null && _seller != null && _rating != null;
 
@@ -159,6 +182,13 @@ class _OfferingDetailPageState extends State<OfferingDetailPage> {
           ),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Reportar',
+            icon: const Icon(Icons.flag_outlined, color: Colors.white),
+            onPressed: _openReport,
+          ),
+        ],
       ),
       body: _buildBody(),
       bottomNavigationBar: SafeArea(
@@ -360,6 +390,122 @@ class _ErrorState extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReportOptionsSheet extends StatefulWidget {
+  const _ReportOptionsSheet({
+    required this.offeringId,
+    required this.sellerId,
+    required this.offeringRepository,
+  });
+
+  final String offeringId;
+  final String? sellerId;
+  final OfferingRepository offeringRepository;
+
+  @override
+  State<_ReportOptionsSheet> createState() => _ReportOptionsSheetState();
+}
+
+class _ReportOptionsSheetState extends State<_ReportOptionsSheet> {
+  String? _sellerId;
+  bool _loadingSeller = false;
+  bool _sellerFailed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _sellerId = widget.sellerId;
+    if (_sellerId == null || _sellerId!.isEmpty) {
+      _loadSeller();
+    }
+  }
+
+  Future<void> _loadSeller() async {
+    setState(() {
+      _loadingSeller = true;
+      _sellerFailed = false;
+    });
+    try {
+      final OfferingDetail detail = await widget.offeringRepository.fetchDetail(
+        widget.offeringId,
+      );
+      final SellerProfile seller = await widget.offeringRepository.fetchSeller(
+        detail.userId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _sellerId = seller.id;
+        _loadingSeller = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loadingSeller = false;
+        _sellerFailed = true;
+      });
+    }
+  }
+
+  void _report(String targetType, String targetId) {
+    Navigator.of(context).pop((targetType: targetType, targetId: targetId));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String? sellerId = _sellerId;
+    final bool canReportFarmer =
+        !_loadingSeller &&
+        !_sellerFailed &&
+        sellerId != null &&
+        sellerId.isNotEmpty;
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.sm,
+            ),
+            child: Text('Reportar', style: AppText.label),
+          ),
+          ListTile(
+            leading: const Icon(
+              Icons.flag_outlined,
+              color: AppColors.blackGreen,
+            ),
+            title: const Text('Reportar publicación'),
+            onTap: () => _report('offering', widget.offeringId),
+          ),
+          ListTile(
+            leading: _loadingSeller
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(
+                    Icons.person_outline,
+                    color: AppColors.blackGreen,
+                  ),
+            title: const Text('Reportar al agricultor'),
+            subtitle: _loadingSeller
+                ? const Text('Cargando agricultor…')
+                : _sellerFailed
+                ? const Text('No se pudo cargar el agricultor')
+                : null,
+            enabled: canReportFarmer,
+            onTap: canReportFarmer ? () => _report('user', sellerId) : null,
+          ),
+          const SizedBox(height: AppSpacing.sm),
         ],
       ),
     );
