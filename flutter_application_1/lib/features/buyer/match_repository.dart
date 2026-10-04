@@ -34,6 +34,32 @@ class MatchRepository {
     await _api.post('/matches/pass/$offerId', token: token);
   }
 
+  Future<List<Match>> fetchMatches(String requestId) async {
+    final String token = await _readTokenOrThrow();
+    final dynamic json = await _api.get(
+      '/matches/requests/$requestId',
+      token: token,
+    );
+    return _listItems(json)
+        .map((Map<String, dynamic> item) => Match.fromJson(item))
+        .toList();
+  }
+
+  Future<Match> fetchMatch(String matchId) async {
+    final String token = await _readTokenOrThrow();
+    final dynamic json = await _api.get('/matches/$matchId', token: token);
+    return Match.fromJson(json as Map<String, dynamic>);
+  }
+
+  Future<MatchOffer> fetchSupplyOffer(String offerId) async {
+    final String token = await _readTokenOrThrow();
+    final dynamic json = await _api.get(
+      '/supply-offers/$offerId',
+      token: token,
+    );
+    return MatchOffer.fromJson(json as Map<String, dynamic>);
+  }
+
   Future<String> _readTokenOrThrow() async {
     final String? token = await _tokenStore.readToken();
     if (token == null) {

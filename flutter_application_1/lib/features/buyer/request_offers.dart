@@ -6,6 +6,7 @@ import 'package:flutter_application_1/features/buyer/catalog_models.dart';
 import 'package:flutter_application_1/features/buyer/match_models.dart';
 import 'package:flutter_application_1/features/buyer/match_repository.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_models.dart';
+import 'package:flutter_application_1/features/buyer/transaction_page.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
 class RequestOffersPage extends StatefulWidget {
@@ -66,11 +67,13 @@ class _RequestOffersPageState extends State<RequestOffersPage> {
     if (_busy.contains(id)) return;
     setState(() => _busy.add(id));
     try {
-      await _repository.like(id);
+      final MatchResult result = await _repository.like(id);
       if (!mounted) return;
       _changed = true;
       _showMessage('Oferta aceptada');
       await _load(showSpinner: false);
+      if (!mounted) return;
+      await _openTransaction(result.matchId);
     } on ApiException catch (error) {
       if (!mounted) return;
       if (error.statusCode == 409) {
@@ -85,6 +88,15 @@ class _RequestOffersPageState extends State<RequestOffersPage> {
     } finally {
       if (mounted) setState(() => _busy.remove(id));
     }
+  }
+
+  Future<void> _openTransaction(String matchId) async {
+    if (matchId.isEmpty) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => TransactionPage(matchId: matchId),
+      ),
+    );
   }
 
   Future<void> _pass(PrioritizedOffer prioritized) async {

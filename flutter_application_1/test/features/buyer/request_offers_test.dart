@@ -3,10 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/core/api_exception.dart';
 import 'package:flutter_application_1/core/token_store.dart';
+import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/features/buyer/match_models.dart';
 import 'package:flutter_application_1/features/buyer/match_repository.dart';
 import 'package:flutter_application_1/features/buyer/request_offers.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_models.dart';
+import 'package:flutter_application_1/features/buyer/transaction_page.dart';
+
+import '../../helpers/fake_auth_repository.dart';
+import '../../helpers/fake_user_repository.dart';
 
 class FakeMatchRepository extends MatchRepository {
   FakeMatchRepository({List<PrioritizedOffer>? offers})
@@ -110,8 +115,14 @@ PrioritizedOffer buildPrioritized({
   ],
 );
 
-Widget wrap(FakeMatchRepository repository) => MaterialApp(
-  home: RequestOffersPage(request: buildRequest(), repository: repository),
+Widget wrap(FakeMatchRepository repository) => SessionScope(
+  controller: SessionController(
+    authRepository: FakeAuthRepository(),
+    userRepository: FakeUserRepository(),
+  ),
+  child: MaterialApp(
+    home: RequestOffersPage(request: buildRequest(), repository: repository),
+  ),
 );
 
 Future<void> loadPage(WidgetTester tester) async {
@@ -184,12 +195,14 @@ void main() {
     await tester.pumpWidget(wrap(repository));
     await loadPage(tester);
     await tester.tap(find.text('Aceptar'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
     expect(repository.likeCalls, 1);
     expect(repository.lastLikedId, 'offer-9');
     expect(repository.fetchCalls, 2);
     expect(find.text('Oferta aceptada'), findsOneWidget);
+    expect(find.byType(TransactionPage), findsOneWidget);
   });
 
   testWidgets('discarding calls pass with the right id', (
@@ -221,7 +234,8 @@ void main() {
       find.byKey(const ValueKey<String>('offer-swipe-right')),
       const Offset(500, 0),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
 
     expect(repository.likeCalls, 1);
     expect(repository.lastLikedId, 'swipe-right');

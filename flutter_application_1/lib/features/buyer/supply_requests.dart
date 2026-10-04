@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/core/token_store.dart';
+import 'package:flutter_application_1/features/buyer/match_models.dart';
 import 'package:flutter_application_1/features/buyer/request_offers.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_form.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_models.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_repository.dart';
+import 'package:flutter_application_1/features/buyer/transaction_page.dart';
+import 'package:flutter_application_1/features/buyer/transaction_repository.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
 bool canPublishSupplyRequests(int? role) => role == 3 || role == 4;
 
 class SupplyRequestsPage extends StatefulWidget {
-  const SupplyRequestsPage({super.key, this.repository});
+  const SupplyRequestsPage({
+    super.key,
+    this.repository,
+    this.transactionRepository,
+  });
 
   final SupplyRequestRepository? repository;
+  final TransactionRepository? transactionRepository;
 
   @override
   State<SupplyRequestsPage> createState() => _SupplyRequestsPageState();
@@ -22,6 +30,9 @@ class _SupplyRequestsPageState extends State<SupplyRequestsPage> {
   late final SupplyRequestRepository _repository =
       widget.repository ??
       SupplyRequestRepository(apiClient: ApiClient(), tokenStore: TokenStore());
+  late final TransactionRepository _transactionRepository =
+      widget.transactionRepository ??
+      TransactionRepository(apiClient: ApiClient(), tokenStore: TokenStore());
 
   List<SupplyRequest> _requests = <SupplyRequest>[];
   bool _loading = true;
@@ -83,6 +94,42 @@ class _SupplyRequestsPageState extends State<SupplyRequestsPage> {
       ),
     );
     if (changed == true) await _load();
+  }
+
+  Future<void> _openTransaction(SupplyRequest request) async {
+    final List<Transaction> transactions;
+    try {
+      transactions = await _transactionRepository.fetchByRequest(request.id);
+    } catch (_) {
+      if (!mounted) return;
+      _showMessage('No se pudieron cargar las transacciones');
+      return;
+    }
+    if (!mounted) return;
+    if (transactions.isEmpty) {
+      _showMessage('Todavía no hay transacciones para esta solicitud');
+      return;
+    }
+    if (transactions.length == 1) {
+      await _openTransactionPage(transactions.single);
+      return;
+    }
+    final Transaction? chosen = await showModalBottomSheet<Transaction>(
+      context: context,
+      builder: (BuildContext sheetContext) =>
+          _TransactionPicker(transactions: transactions),
+    );
+    if (chosen == null || !mounted) return;
+    await _openTransactionPage(chosen);
+  }
+
+  Future<void> _openTransactionPage(Transaction transaction) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => TransactionPage(matchId: transaction.matchId),
+      ),
+    );
+    if (mounted) await _load();
   }
 
   Future<void> _cancel(SupplyRequest request) async {
@@ -264,12 +311,12 @@ class _SupplyRequestsPageState extends State<SupplyRequestsPage> {
           const SizedBox(height: AppSpacing.sm),
           _DetailLine(
             icon: Icons.event_outlined,
-            text: 'Límite: ${_deadline(request.requestDeadline)}',
+            text: 'Límite: ${_formatDate(request.requestDeadline)}',
           ),
           const SizedBox(height: AppSpacing.xs),
           _DetailLine(
             icon: Icons.local_shipping_outlined,
-            text: 'Entrega: ${_deadline(request.deliveryDeadline)}',
+            text: 'Entrega: ${_formatDate(request.deliveryDeadline)}',
           ),
           const SizedBox(height: AppSpacing.xs),
           _DetailLine(
@@ -309,22 +356,65 @@ class _SupplyRequestsPageState extends State<SupplyRequestsPage> {
               ],
             ),
           ],
+          if (!request.isOpen && request.committedAmount > 0) ...[
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              spacing: AppSpacing.sm,
+              children: [
+                TextButton(
+                  onPressed: () => _openTransaction(request),
+                  child: const Text('Ver transacción'),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  String _deadline(String? value) {
-    final DateTime? date = DateTime.tryParse(value ?? '');
-    if (date == null) return 'Sin definir';
-    final String day = date.day.toString().padLeft(2, '0');
-    final String month = date.month.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}';
-  }
-
   String _quantity(double value) {
     if (value == value.roundToDouble()) return value.toInt().toString();
     return value.toString();
+  }
+}
+
+String _formatDate(String? value) {
+  final DateTime? date = DateTime.tryParse(value ?? '');
+  if (date == null) return 'Sin definir';
+  final String day = date.day.toString().padLeft(2, '0');
+  final String month = date.month.toString().padLeft(2, '0');
+  return '$day/$month/${date.year}';
+}
+
+class _TransactionPicker extends StatelessWidget {
+  const _TransactionPicker({required this.transactions});
+
+  final List<Transaction> transactions;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Text('Elegí una transacción', style: AppText.sectionTitle),
+          ),
+          ...transactions.map(
+            (Transaction transaction) => ListTile(
+              title: Text(transaction.status.label, style: AppText.label),
+              subtitle: Text(
+                _formatDate(transaction.createdAt),
+                style: AppText.bodySecondary,
+              ),
+              onTap: () => Navigator.of(context).pop(transaction),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

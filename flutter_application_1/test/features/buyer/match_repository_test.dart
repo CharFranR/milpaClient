@@ -85,6 +85,21 @@ Map<String, dynamic> contributionJson({
   'weighted_score': weightedScore,
 };
 
+Map<String, dynamic> matchJson({
+  String id = 'match-1',
+  int status = 0,
+  int amountUnit = 0,
+}) => <String, dynamic>{
+  'id': id,
+  'supply_offer': 'offer-1',
+  'supply_request': 'request-1',
+  'status': status,
+  'matched_amount': 500,
+  'amount_unit': amountUnit,
+  'created_at': '2026-10-04T07:42:02Z',
+  'updated_at': '2026-10-04T07:42:02Z',
+};
+
 Map<String, dynamic> prioritizedJson({
   String id = 'offer-1',
   double score = 0.55,
@@ -291,6 +306,145 @@ void main() {
 
       await expectLater(
         buildRepository(mockClient, FakeTokenStore()).pass('offer-2'),
+        throwsA(
+          isA<ApiException>().having(
+            (ApiException e) => e.statusCode,
+            'status',
+            401,
+          ),
+        ),
+      );
+      expect(called, isFalse);
+    });
+  });
+
+  group('MatchRepository fetchMatches', () {
+    test('pide los matches del request y parsea la lista', () async {
+      Uri? requestedUri;
+      String? authorization;
+      final MockClient mockClient = MockClient((http.Request request) async {
+        requestedUri = request.url;
+        authorization = request.headers['Authorization'];
+        return jsonResponse(<Map<String, dynamic>>[
+          matchJson(),
+          matchJson(id: 'match-2', status: 1, amountUnit: 2),
+        ]);
+      });
+
+      final List<Match> matches = await buildRepository(
+        mockClient,
+        storeWithToken(),
+      ).fetchMatches('request-1');
+
+      expect(requestedUri!.path, '/api/v1/matches/requests/request-1');
+      expect(authorization, 'Bearer token-123');
+      expect(matches, hasLength(2));
+      expect(matches.first.id, 'match-1');
+      expect(matches.first.supplyOffer, 'offer-1');
+      expect(matches.first.supplyRequest, 'request-1');
+      expect(matches.first.status, MatchStatus.active);
+      expect(matches.first.matchedAmount, 500);
+      expect(matches.first.amountUnit, MeasureUnit.kilogram);
+      expect(matches.last.status, MatchStatus.cancelled);
+      expect(matches.last.amountUnit, MeasureUnit.ton);
+    });
+
+    test('un payload sin data devuelve lista vacía', () async {
+      final MockClient mockClient = MockClient(
+        (http.Request request) async => http.Response(
+          '{}',
+          200,
+          headers: <String, String>{
+            'content-type': 'application/json; charset=utf-8',
+          },
+        ),
+      );
+
+      expect(
+        await buildRepository(mockClient, storeWithToken()).fetchMatches(
+          'request-1',
+        ),
+        isEmpty,
+      );
+    });
+  });
+
+  group('MatchRepository fetchMatch', () {
+    test('pide el match por id con Bearer y parsea el DTO', () async {
+      Uri? requestedUri;
+      String? authorization;
+      final MockClient mockClient = MockClient((http.Request request) async {
+        requestedUri = request.url;
+        authorization = request.headers['Authorization'];
+        return jsonResponse(matchJson());
+      });
+
+      final Match match = await buildRepository(
+        mockClient,
+        storeWithToken(),
+      ).fetchMatch('match-1');
+
+      expect(requestedUri!.path, '/api/v1/matches/match-1');
+      expect(authorization, 'Bearer token-123');
+      expect(match.id, 'match-1');
+      expect(match.supplyOffer, 'offer-1');
+    });
+
+    test('sin token responde 401 y no toca el server', () async {
+      var called = false;
+      final MockClient mockClient = MockClient((http.Request request) async {
+        called = true;
+        return jsonResponse(matchJson());
+      });
+
+      await expectLater(
+        buildRepository(mockClient, FakeTokenStore()).fetchMatch('match-1'),
+        throwsA(
+          isA<ApiException>().having(
+            (ApiException e) => e.statusCode,
+            'status',
+            401,
+          ),
+        ),
+      );
+      expect(called, isFalse);
+    });
+  });
+
+  group('MatchRepository fetchSupplyOffer', () {
+    test('pide la oferta y lee el supplier_id', () async {
+      Uri? requestedUri;
+      String? authorization;
+      final MockClient mockClient = MockClient((http.Request request) async {
+        requestedUri = request.url;
+        authorization = request.headers['Authorization'];
+        return jsonResponse(offerJson());
+      });
+
+      final MatchOffer offer = await buildRepository(
+        mockClient,
+        storeWithToken(),
+      ).fetchSupplyOffer('offer-1');
+
+      expect(requestedUri!.path, '/api/v1/supply-offers/offer-1');
+      expect(authorization, 'Bearer token-123');
+      expect(offer.id, 'offer-1');
+      expect(offer.supplierId, 'supplier-1');
+      expect(offer.totalAmount, 500);
+    });
+
+    test('sin token responde 401 y no toca el server', () async {
+      var called = false;
+      final MockClient mockClient = MockClient((http.Request request) async {
+        called = true;
+        return jsonResponse(offerJson());
+      });
+
+      await expectLater(
+        buildRepository(
+          mockClient,
+          FakeTokenStore(),
+        ).fetchSupplyOffer('offer-1'),
         throwsA(
           isA<ApiException>().having(
             (ApiException e) => e.statusCode,
