@@ -141,7 +141,16 @@ class _BuyerHomeState extends State<BuyerHome> {
                     crossAxisSpacing: 12,
                     childAspectRatio: 0.8,
                     children: mockFeatured
-                        .map((p) => ProductCard(product: p))
+                        .map(
+                          (p) => ProductCard(
+                            name: p.name,
+                            seller: p.seller,
+                            priceText: p.price,
+                            unit: p.unit,
+                            emoji: p.emoji,
+                            badge: p.badge,
+                          ),
+                        )
                         .toList(),
                   ),
                 ],

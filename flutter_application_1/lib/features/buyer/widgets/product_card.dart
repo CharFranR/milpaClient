@@ -1,13 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/features/buyer/mock_data.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
-/// Tarjeta de producto del catálogo del comprador.
 class ProductCard extends StatelessWidget {
-  const ProductCard({super.key, required this.product});
+  const ProductCard({
+    super.key,
+    required this.name,
+    required this.seller,
+    required this.priceText,
+    this.unit,
+    this.emoji = '🌿',
+    this.imageSrc,
+    this.badge,
+  });
 
-  /// Producto que muestra la tarjeta.
-  final MockProduct product;
+  final String name;
+  final String seller;
+  final String priceText;
+  final String? unit;
+  final String emoji;
+  final String? imageSrc;
+  final String? badge;
 
   @override
   Widget build(BuildContext context) {
@@ -37,8 +49,10 @@ class ProductCard extends StatelessWidget {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      Text(product.emoji, style: const TextStyle(fontSize: 48)),
-                      if (product.badge != null)
+                      Positioned.fill(
+                        child: _ProductImage(imageSrc: imageSrc, emoji: emoji),
+                      ),
+                      if (badge != null)
                         Positioned(
                           top: 8,
                           left: 8,
@@ -54,7 +68,7 @@ class ProductCard extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              product.badge!,
+                              badge!,
                               style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w700,
@@ -96,10 +110,10 @@ class ProductCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(product.seller, style: AppText.caption),
+                    Text(seller, style: AppText.caption),
                     const SizedBox(height: 2),
                     Text(
-                      product.name,
+                      name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppText.label,
@@ -109,15 +123,15 @@ class ProductCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          product.price,
+                          priceText,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: AppColors.blackGreen,
                           ),
                         ),
-                        const SizedBox(width: 3),
-                        Text(product.unit, style: AppText.caption),
+                        if (unit != null) const SizedBox(width: 3),
+                        if (unit != null) Text(unit!, style: AppText.caption),
                       ],
                     ),
                   ],
@@ -128,5 +142,39 @@ class ProductCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _ProductImage extends StatelessWidget {
+  const _ProductImage({required this.imageSrc, required this.emoji});
+
+  final String? imageSrc;
+  final String emoji;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? src = imageSrc;
+    if (src == null || src.isEmpty) {
+      return _EmojiFallback(emoji: emoji);
+    }
+    return Image.network(
+      src,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, progress) =>
+          progress == null ? child : _EmojiFallback(emoji: emoji),
+      errorBuilder: (context, error, stackTrace) =>
+          _EmojiFallback(emoji: emoji),
+    );
+  }
+}
+
+class _EmojiFallback extends StatelessWidget {
+  const _EmojiFallback({required this.emoji});
+
+  final String emoji;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(child: Text(emoji, style: const TextStyle(fontSize: 48)));
   }
 }

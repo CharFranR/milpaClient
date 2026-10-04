@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
-/// Campo de búsqueda para las cabeceras verdes del comprador.
 class SearchField extends StatelessWidget {
-  const SearchField({super.key, required this.hint});
+  const SearchField({
+    super.key,
+    required this.hint,
+    this.onChanged,
+    this.onSubmitted,
+  });
 
-  /// Texto de ayuda que se muestra con el campo vacío.
   final String hint;
+  final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +29,8 @@ class SearchField extends StatelessWidget {
           Expanded(
             child: TextField(
               textInputAction: TextInputAction.search,
+              onChanged: onChanged,
+              onSubmitted: onSubmitted,
               style: const TextStyle(color: Colors.white, fontSize: 14),
               decoration: InputDecoration(
                 border: InputBorder.none,
