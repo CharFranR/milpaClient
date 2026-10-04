@@ -9,6 +9,8 @@ class Coordinates {
 
 abstract class LocationReporter {
   Future<Coordinates?> capture();
+
+  Future<Coordinates?> captureGranted();
 }
 
 class DeviceLocationReporter implements LocationReporter {
@@ -28,18 +30,39 @@ class DeviceLocationReporter implements LocationReporter {
         return null;
       }
 
-      final Position position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 20),
-        ),
-      );
-      return Coordinates(
-        latitude: position.latitude,
-        longitude: position.longitude,
-      );
+      return await _position();
     } catch (_) {
       return null;
     }
+  }
+
+  @override
+  Future<Coordinates?> captureGranted() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) return null;
+
+      final LocationPermission permission = await Geolocator.checkPermission();
+      if (permission != LocationPermission.whileInUse &&
+          permission != LocationPermission.always) {
+        return null;
+      }
+
+      return await _position();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Coordinates> _position() async {
+    final Position position = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 20),
+      ),
+    );
+    return Coordinates(
+      latitude: position.latitude,
+      longitude: position.longitude,
+    );
   }
 }

@@ -32,6 +32,8 @@ class FakeCatalogRepository extends CatalogRepository {
   CatalogSort? lastSort;
   int? lastPage;
   int? lastPageSize;
+  double? lastLatitude;
+  double? lastLongitude;
 
   @override
   Future<List<CatalogCategory>> fetchCategories() async {
@@ -48,6 +50,8 @@ class FakeCatalogRepository extends CatalogRepository {
     CatalogSort sort = CatalogSort.relevance,
     int page = 1,
     int pageSize = 20,
+    double? latitude,
+    double? longitude,
   }) async {
     searchCalls++;
     lastTerm = term;
@@ -55,6 +59,8 @@ class FakeCatalogRepository extends CatalogRepository {
     lastSort = sort;
     lastPage = page;
     lastPageSize = pageSize;
+    lastLatitude = latitude;
+    lastLongitude = longitude;
     if (page > 1) {
       final Object? paginationFailure = paginationError;
       if (paginationFailure != null) throw paginationFailure;

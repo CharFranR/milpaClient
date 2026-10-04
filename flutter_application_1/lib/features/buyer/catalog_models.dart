@@ -3,7 +3,8 @@ import 'package:flutter_application_1/core/image_url.dart';
 enum CatalogSort {
   relevance('relevance'),
   priceAsc('price_asc'),
-  priceDesc('price_desc');
+  priceDesc('price_desc'),
+  proximity('proximity');
 
   const CatalogSort(this.wire);
 
@@ -27,7 +28,21 @@ class CatalogCategory {
   final String id;
   final String name;
   final String description;
+
+  String get emoji => _categoryEmoji[name] ?? '🌿';
 }
+
+const Map<String, String> _categoryEmoji = <String, String>{
+  'Frutales': '🍎',
+  'Cítricos': '🍊',
+  'Verduras': '🥦',
+  'Hortalizas': '🥬',
+  'Frutas': '🍅',
+  'Lácteos': '🥛',
+  'Carnes': '🥩',
+  'Granos': '🌾',
+  'Otros': '🌿',
+};
 
 class CatalogItem {
   const CatalogItem({
