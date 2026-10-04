@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:flutter_application_1/features/buyer/catalog_models.dart';
 import 'package:flutter_application_1/features/buyer/explore.dart';
+import 'package:flutter_application_1/features/buyer/offering_detail.dart';
 
 import '../../helpers/fake_catalog_repository.dart';
 
@@ -307,5 +308,27 @@ void main() {
 
     await tester.pump(const Duration(seconds: 5));
     await tester.pump();
+  });
+
+  testWidgets('al tocar una tarjeta se abre el detalle de la oferta', (
+    WidgetTester tester,
+  ) async {
+    final FakeCatalogRepository repository = FakeCatalogRepository(
+      categories: testCategories,
+      page: buildPage(
+        results: <CatalogItem>[buildItem()],
+        totalHits: 1,
+        totalPages: 1,
+      ),
+    );
+
+    await tester.pumpWidget(wrap(repository));
+    await tester.pump();
+
+    await tester.tap(find.text('Tomate cherry'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(OfferingDetailPage), findsOneWidget);
   });
 }

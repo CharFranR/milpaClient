@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/features/buyer/widgets/product_image.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
 class ProductCard extends StatelessWidget {
@@ -11,6 +12,7 @@ class ProductCard extends StatelessWidget {
     this.emoji = '🌿',
     this.imageSrc,
     this.badge,
+    this.onTap,
   });
 
   final String name;
@@ -20,6 +22,7 @@ class ProductCard extends StatelessWidget {
   final String emoji;
   final String? imageSrc;
   final String? badge;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +31,7 @@ class ProductCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () {},
+        onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
@@ -50,7 +53,7 @@ class ProductCard extends StatelessWidget {
                     alignment: Alignment.center,
                     children: [
                       Positioned.fill(
-                        child: _ProductImage(imageSrc: imageSrc, emoji: emoji),
+                        child: ProductImage(imageSrc: imageSrc, emoji: emoji),
                       ),
                       if (badge != null)
                         Positioned(
@@ -142,39 +145,5 @@ class ProductCard extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _ProductImage extends StatelessWidget {
-  const _ProductImage({required this.imageSrc, required this.emoji});
-
-  final String? imageSrc;
-  final String emoji;
-
-  @override
-  Widget build(BuildContext context) {
-    final String? src = imageSrc;
-    if (src == null || src.isEmpty) {
-      return _EmojiFallback(emoji: emoji);
-    }
-    return Image.network(
-      src,
-      fit: BoxFit.cover,
-      loadingBuilder: (context, child, progress) =>
-          progress == null ? child : _EmojiFallback(emoji: emoji),
-      errorBuilder: (context, error, stackTrace) =>
-          _EmojiFallback(emoji: emoji),
-    );
-  }
-}
-
-class _EmojiFallback extends StatelessWidget {
-  const _EmojiFallback({required this.emoji});
-
-  final String emoji;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(child: Text(emoji, style: const TextStyle(fontSize: 48)));
   }
 }

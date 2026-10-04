@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/features/buyer/catalog_models.dart';
 import 'package:flutter_application_1/features/buyer/catalog_repository.dart';
+import 'package:flutter_application_1/features/buyer/offering_detail.dart';
 import 'package:flutter_application_1/features/buyer/widgets/product_card.dart';
 import 'package:flutter_application_1/features/buyer/widgets/search_field.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
@@ -317,6 +318,12 @@ class _BuyerExploreState extends State<BuyerExplore> {
                       priceText: formatPrice(item.price),
                       imageSrc: item.imageSrc,
                       badge: item.farmerVerified ? 'Verificado' : null,
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              OfferingDetailPage(offeringId: item.id),
+                        ),
+                      ),
                     ),
                   )
                   .toList(),
