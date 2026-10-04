@@ -116,6 +116,17 @@ class SessionController extends ChangeNotifier {
     );
     notifyListeners();
   }
+
+  Future<void> updatePhoto({
+    required String filePath,
+    required String filename,
+  }) async {
+    _user = await _userRepository.uploadPhoto(
+      filePath: filePath,
+      filename: filename,
+    );
+    notifyListeners();
+  }
 }
 
 class SessionScope extends InheritedNotifier<SessionController> {

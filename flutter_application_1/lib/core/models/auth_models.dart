@@ -1,3 +1,5 @@
+import 'package:flutter_application_1/core/image_url.dart';
+
 class User {
   const User({
     required this.id,
@@ -9,6 +11,7 @@ class User {
     this.department = '',
     this.municipality = '',
     this.addressLine = '',
+    this.photoUrl = '',
     this.createdAt,
     this.updatedAt,
   });
@@ -23,6 +26,7 @@ class User {
     department: json['department'] as String? ?? '',
     municipality: json['municipality'] as String? ?? '',
     addressLine: (json['address_line'] ?? json['address']) as String? ?? '',
+    photoUrl: json['photo_url'] as String? ?? '',
     createdAt: json['created_at'] as String?,
     updatedAt: json['updated_at'] as String?,
   );
@@ -36,8 +40,11 @@ class User {
   final String department;
   final String municipality;
   final String addressLine;
+  final String photoUrl;
   final String? createdAt;
   final String? updatedAt;
+
+  String? get photoSrc => resolveImageSrc(photoUrl);
 }
 
 class LoginResponse {
