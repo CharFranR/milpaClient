@@ -28,20 +28,22 @@ class _BuyerLayoutState extends State<BuyerLayout> {
     }
   }
 
-  static const List<Widget> _pages = [
-    BuyerHome(),
-    BuyerExplore(),
-    BuyerMessages(),
-    BuyerProfile(),
-  ];
-
   void _select(int index) => setState(() => _currentIndex = index);
+
+  Widget _page(int index) {
+    return switch (index) {
+      0 => BuyerHome(onExplore: () => _select(1)),
+      1 => const BuyerExplore(),
+      2 => const BuyerMessages(),
+      _ => const BuyerProfile(),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.whitemodeBackgrund,
-      body: _pages[_currentIndex],
+      body: _page(_currentIndex),
       floatingActionButton:
           canPublishSupplyRequests(SessionScope.of(context).user?.role)
           ? FloatingActionButton(

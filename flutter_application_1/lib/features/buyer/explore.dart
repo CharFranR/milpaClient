@@ -270,6 +270,7 @@ class _BuyerExploreState extends State<BuyerExplore> {
                     CatalogSort.priceAsc => Icons.arrow_upward,
                     CatalogSort.priceDesc => Icons.arrow_downward,
                     CatalogSort.relevance => Icons.swap_vert,
+                    CatalogSort.proximity => Icons.near_me,
                   },
                   label: 'Precio',
                   active: _sort != CatalogSort.relevance,

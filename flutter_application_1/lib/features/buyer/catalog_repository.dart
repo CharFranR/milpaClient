@@ -12,6 +12,8 @@ class CatalogRepository {
     CatalogSort sort = CatalogSort.relevance,
     int page = 1,
     int pageSize = 20,
+    double? latitude,
+    double? longitude,
   }) async {
     final Map<String, String> query = <String, String>{
       'term': ?(term.isEmpty ? null : term),
@@ -21,6 +23,8 @@ class CatalogRepository {
       'sort': sort.wire,
       'page': '$page',
       'page_size': '$pageSize',
+      'lat': ?(latitude == null ? null : '$latitude'),
+      'lng': ?(longitude == null ? null : '$longitude'),
     };
     final dynamic json = await _api.get('/search', query: query);
     return CatalogPage.fromJson(json as Map<String, dynamic>);
