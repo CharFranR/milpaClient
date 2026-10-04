@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_application_1/core/models/auth_models.dart';
+import 'package:flutter_application_1/core/photo_picker.dart';
 import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/features/buyer/edit_profile.dart';
 import 'package:flutter_application_1/features/buyer/supply_requests.dart';
@@ -11,7 +12,12 @@ const Color _sectionAccent = Color(0xff2563eb);
 const Color _editProfileButton = Color(0xff064407);
 
 class BuyerProfile extends StatefulWidget {
-  const BuyerProfile({super.key});
+  const BuyerProfile({
+    super.key,
+    this.photoPicker = const DevicePhotoPicker(),
+  });
+
+  final PhotoPicker photoPicker;
 
   @override
   State<BuyerProfile> createState() => _BuyerProfileState();
@@ -19,6 +25,7 @@ class BuyerProfile extends StatefulWidget {
 
 class _BuyerProfileState extends State<BuyerProfile> {
   bool _requestedLoad = false;
+  bool _uploadingPhoto = false;
 
   @override
   void didChangeDependencies() {
@@ -27,6 +34,33 @@ class _BuyerProfileState extends State<BuyerProfile> {
       _requestedLoad = true;
       SessionScope.of(context).loadUser();
     }
+  }
+
+  Future<void> _changePhoto() async {
+    if (_uploadingPhoto) return;
+
+    final PickedPhoto? photo = await widget.photoPicker.pick();
+    if (photo == null || !mounted) return;
+
+    setState(() => _uploadingPhoto = true);
+    try {
+      await SessionScope.of(
+        context,
+      ).updatePhoto(filePath: photo.path, filename: photo.filename);
+      if (!mounted) return;
+      _showMessage('Foto actualizada');
+    } catch (_) {
+      if (!mounted) return;
+      _showMessage('No pudimos actualizar tu foto');
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
+  }
+
+  void _showMessage(String text) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
   }
 
   String _fullName(User? user) {
@@ -143,6 +177,9 @@ class _BuyerProfileState extends State<BuyerProfile> {
             _ProfileHeader(
               name: _fullName(user),
               email: user?.email ?? '—',
+              photoSrc: user?.photoSrc,
+              uploadingPhoto: _uploadingPhoto,
+              onChangePhoto: _changePhoto,
               onEdit: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => const EditProfilePage(),
@@ -163,11 +200,17 @@ class _ProfileHeader extends StatelessWidget {
     required this.name,
     required this.email,
     required this.onEdit,
+    this.photoSrc,
+    this.uploadingPhoto = false,
+    this.onChangePhoto,
   });
 
   final String name;
   final String email;
   final VoidCallback onEdit;
+  final String? photoSrc;
+  final bool uploadingPhoto;
+  final VoidCallback? onChangePhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -185,7 +228,11 @@ class _ProfileHeader extends StatelessWidget {
           ),
           child: Column(
             children: [
-              const _ProfileAvatar(),
+              _ProfileAvatar(
+                photoSrc: photoSrc,
+                uploading: uploadingPhoto,
+                onTap: onChangePhoto,
+              ),
               const SizedBox(height: AppSpacing.md),
               Text(
                 name,
@@ -228,17 +275,92 @@ class _ProfileHeader extends StatelessWidget {
 }
 
 class _ProfileAvatar extends StatelessWidget {
-  const _ProfileAvatar();
+  const _ProfileAvatar({this.photoSrc, this.uploading = false, this.onTap});
+
+  final String? photoSrc;
+  final bool uploading;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: Image.asset(
-        'assets/oscar.png',
-        width: 88,
-        height: 88,
-        fit: BoxFit.cover,
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: SizedBox(
+              width: 88,
+              height: 88,
+              child: uploading
+                  ? const ColoredBox(
+                      color: Colors.white24,
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  : _AvatarImage(photoSrc: photoSrc),
+            ),
+          ),
+          Positioned(
+            right: -2,
+            bottom: -2,
+            child: Container(
+              width: 30,
+              height: 30,
+              decoration: const BoxDecoration(
+                color: AppColors.yelow,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.photo_camera,
+                size: 17,
+                color: AppColors.blackGreen,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AvatarImage extends StatelessWidget {
+  const _AvatarImage({this.photoSrc});
+
+  final String? photoSrc;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? src = photoSrc;
+    if (src == null || src.isEmpty) return const _AvatarFallback();
+    return Image.network(
+      src,
+      width: 88,
+      height: 88,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, progress) =>
+          progress == null ? child : const _AvatarFallback(),
+      errorBuilder: (context, error, stackTrace) => const _AvatarFallback(),
+    );
+  }
+}
+
+class _AvatarFallback extends StatelessWidget {
+  const _AvatarFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 88,
+      height: 88,
+      color: Colors.white.withValues(alpha: 0.15),
+      child: const Center(
+        child: Icon(
+          Icons.person,
+          key: ValueKey<String>('avatarFallback'),
+          size: 46,
+          color: Colors.white,
+        ),
       ),
     );
   }

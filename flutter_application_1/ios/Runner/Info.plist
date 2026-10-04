@@ -68,5 +68,7 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Usamos tu ubicación para recomendarte productores cercanos. Es opcional.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Elegís una foto de tu galería para tu perfil.</string>
 </dict>
 </plist>

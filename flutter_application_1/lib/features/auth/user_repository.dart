@@ -50,4 +50,23 @@ class UserRepository {
     await _api.patch('/users/$userId', body: body, token: token);
     return fetchCurrent();
   }
+
+  Future<User> uploadPhoto({
+    required String filePath,
+    required String filename,
+  }) async {
+    final String? userId = await _tokenStore.readUserId();
+    final String? token = await _tokenStore.readToken();
+    if (userId == null || token == null) {
+      throw const ApiException(401, 'Sesión no disponible');
+    }
+    await _api.postMultipart(
+      '/users/$userId/photo',
+      field: 'photo',
+      filePath: filePath,
+      filename: filename,
+      token: token,
+    );
+    return fetchCurrent();
+  }
 }

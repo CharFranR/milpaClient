@@ -31,6 +31,42 @@ class ApiClient {
   Future<dynamic> delete(String path, {String? token}) =>
       _send('DELETE', path, token: token);
 
+  Future<dynamic> postMultipart(
+    String path, {
+    required String field,
+    required String filePath,
+    required String filename,
+    String? token,
+  }) async {
+    final Uri uri = Uri.parse('${ApiConfig.apiBaseUrl}$path');
+    try {
+      final http.MultipartRequest request = http.MultipartRequest('POST', uri)
+        ..headers['Accept'] = 'application/json'
+        ..files.add(
+          await http.MultipartFile.fromPath(
+            field,
+            filePath,
+            filename: filename,
+          ),
+        );
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      final http.StreamedResponse streamed = await _http
+          .send(request)
+          .timeout(timeout);
+      return _decode(await http.Response.fromStream(streamed));
+    } on ApiException {
+      rethrow;
+    } on TimeoutException {
+      throw const NetworkException('El servidor tardó demasiado en responder');
+    } on SocketException {
+      throw const NetworkException();
+    } on http.ClientException {
+      throw const NetworkException();
+    }
+  }
+
   Future<dynamic> _send(
     String method,
     String path, {

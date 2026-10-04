@@ -23,6 +23,10 @@ class FakeUserRepository extends UserRepository {
   Object? updateError;
   int fetchCalls = 0;
   int updateCalls = 0;
+  int photoCalls = 0;
+  String? lastPhotoPath;
+  String? lastPhotoFilename;
+  Object? photoError;
   final Map<String, String> lastUpdate = <String, String>{};
   double? lastUpdatedLatitude;
   double? lastUpdatedLongitude;
@@ -69,6 +73,35 @@ class FakeUserRepository extends UserRepository {
       department: department ?? base.department,
       municipality: municipality ?? base.municipality,
       addressLine: address ?? base.addressLine,
+      createdAt: base.createdAt,
+      updatedAt: base.updatedAt,
+    );
+    current = updated;
+    return updated;
+  }
+
+  @override
+  Future<User> uploadPhoto({
+    required String filePath,
+    required String filename,
+  }) async {
+    photoCalls++;
+    lastPhotoPath = filePath;
+    lastPhotoFilename = filename;
+    if (photoError != null) throw photoError!;
+
+    final User base = current ?? defaultFakeUser;
+    final User updated = User(
+      id: base.id,
+      email: base.email,
+      firstName: base.firstName,
+      lastName: base.lastName,
+      phoneNumber: base.phoneNumber,
+      role: base.role,
+      department: base.department,
+      municipality: base.municipality,
+      addressLine: base.addressLine,
+      photoUrl: 'uploads/$filename',
       createdAt: base.createdAt,
       updatedAt: base.updatedAt,
     );
