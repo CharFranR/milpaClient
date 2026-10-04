@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/core/token_store.dart';
+import 'package:flutter_application_1/features/buyer/request_offers.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_form.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_models.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_repository.dart';
@@ -70,6 +71,15 @@ class _SupplyRequestsPageState extends State<SupplyRequestsPage> {
       MaterialPageRoute<bool>(
         builder: (_) =>
             SupplyRequestFormPage(request: request, repository: _repository),
+      ),
+    );
+    if (changed == true) await _load();
+  }
+
+  Future<void> _openOffers(SupplyRequest request) async {
+    final bool? changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => RequestOffersPage(request: request),
       ),
     );
     if (changed == true) await _load();
@@ -280,13 +290,17 @@ class _SupplyRequestsPageState extends State<SupplyRequestsPage> {
           ],
           if (request.isOpen) ...[
             const SizedBox(height: AppSpacing.md),
-            Row(
+            Wrap(
+              spacing: AppSpacing.sm,
               children: [
+                TextButton(
+                  onPressed: () => _openOffers(request),
+                  child: const Text('Ver ofertas'),
+                ),
                 TextButton(
                   onPressed: () => _openEdit(request),
                   child: const Text('Editar'),
                 ),
-                const SizedBox(width: AppSpacing.sm),
                 TextButton(
                   onPressed: () => _cancel(request),
                   style: TextButton.styleFrom(foregroundColor: Colors.red),
