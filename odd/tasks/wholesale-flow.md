@@ -59,6 +59,21 @@
 
 **Hueco de cobertura conocido:** el test de edición no afirma que los dos selectores muestren su valor sembrado independiente (la siembra por campo está verificada por inspección en `supply_request_form.dart:62-67`). Es la primera aserción a agregar si se retoca este formulario.
 
+## Especificación extra (C4)
+
+**Origen:** pedido del usuario, en paralelo a un cambio suyo en el server. El usuario hizo opcionales `number_of_units`, `amount_per_unit` y `unit_of_measure` en `server/aplication/dto/SupplyRequest.go` (`omitempty`) y en la migración `000016` (quitó `NOT NULL`).
+
+**Pedido:** agrupar esos tres campos en un cuadro llamado "Especificación extra" y que sean opcionales en el formulario.
+
+**Hallazgos sobre el cambio del server (sin tocar, es su trabajo en curso):**
+
+1. **La migración editada ya estaba aplicada en otras bases.** En local funcionó porque la base fue recreada (`schema_migrations` en 20, sin datos). En Render y en la base de otro compañero, golang-migrate no re-ejecuta una versión ya aplicada: allá los tres campos siguen `NOT NULL` y el esquema diverge del archivo. La práctica correcta es revertir `000016` y agregar una migración nueva (`000021`, el siguiente libre en disco) con `ALTER TABLE supply_requests ALTER COLUMN <col> DROP NOT NULL`.
+2. **`omitempty` no hace opcional la entrada.** Solo afecta a la respuesta: ahora omite esas claves cuando valen cero. El cliente ya tolera claves ausentes (`?? 0`), así que no rompe nada.
+3. **"Opcional" no es "ausente" para la unidad.** `unit_of_measure` es un enum por valor, así que omitirlo llega como `0` = kg, y el `INSERT` escribe `0`, no `NULL`. La columna nullable solo es alcanzable por otro escritor. Un "sin especificar" real pediría `*domain.MeasurementOptions` en el DTO y `NULL` en la columna.
+4. Las validaciones de `Create` no cambian: siguen exigiéndose `product_name`, `total_amount > 0`, `unit_of_measure` válido y `Department` no vacío. Esos tres campos nunca estuvieron validados del lado server; quien los exigía era el formulario del cliente.
+
+- [ ] **C4 — Especificación extra opcional (cliente).** Los tres campos (`Cantidad de unidades`, `Cantidad por unidad`, `Unidad de cada unidad de entrega`) dentro de un cuadro titulado "Especificación extra" marcado como opcional; los dos numéricos dejan de bloquear el envío (vacío → `0`, pero un valor presente tiene que ser mayor a cero); tests de envío con la especificación vacía y con la especificación completa.
+
 ## Hallazgos
 
 ### El bloque server del roadmap estaba desactualizado

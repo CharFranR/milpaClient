@@ -133,6 +133,15 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
     return parsed == null || parsed <= 0 ? 'Ingresa $label' : null;
   }
 
+  String? _optionalPositive(String? value) {
+    final String trimmed = (value ?? '').trim();
+    if (trimmed.isEmpty) return null;
+    final double? parsed = double.tryParse(trimmed.replaceAll(',', '.'));
+    return parsed == null || parsed <= 0
+        ? 'Ingresa una cantidad mayor a cero'
+        : null;
+  }
+
   Future<void> _selectDate({required bool requestDate}) async {
     final DateTime current = requestDate ? _requestDeadline : _deliveryDeadline;
     final DateTime? selected = await showDatePicker(
@@ -268,39 +277,68 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 _unitSelector(
-                  label: 'Unidad de la cantidad total',
+                  label: 'Unidad de medida',
                   selected: _amountUnit,
                   onSelectionChanged: (MeasureUnit value) {
                     setState(() => _amountUnit = value);
                   },
                 ),
                 const SizedBox(height: AppSpacing.md),
-                LabeledField(
-                  label: 'Cantidad de unidades',
-                  hint: 'Ej. 100 costales',
-                  controller: _numberOfUnitsController,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.next,
-                  validator: (String? value) =>
-                      _positive(value, 'cantidad de unidades'),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                LabeledField(
-                  label: 'Cantidad por unidad',
-                  hint: 'Ej. 50',
-                  controller: _amountPerUnitController,
-                  keyboardType: TextInputType.number,
-                  textInputAction: TextInputAction.next,
-                  validator: (String? value) =>
-                      _positive(value, 'cantidad por unidad'),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                _unitSelector(
-                  label: 'Unidad de cada unidad de entrega',
-                  selected: _unitOfMeasure,
-                  onSelectionChanged: (MeasureUnit value) {
-                    setState(() => _unitOfMeasure = value);
-                  },
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.dark.withValues(alpha: 0.06),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Especificación extra',
+                              style: AppText.sectionTitle,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Opcional: contá cómo querés que te lo entreguen',
+                        style: AppText.caption,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      LabeledField(
+                        label: 'Cantidad de unidades de presentación',
+                        hint: 'Ej. 100 costales',
+                        controller: _numberOfUnitsController,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                        validator: _optionalPositive,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      LabeledField(
+                        label: 'Producto por presentación',
+                        hint: 'Ej. 50',
+                        controller: _amountPerUnitController,
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.next,
+                        validator: _optionalPositive,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _unitSelector(
+                        label: 'Unidad de medida',
+                        selected: _unitOfMeasure,
+                        onSelectionChanged: (MeasureUnit value) {
+                          setState(() => _unitOfMeasure = value);
+                        },
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 LabeledField(

@@ -26,8 +26,7 @@ Finder fieldWithLabel(String label) {
   );
 }
 
-Finder unitSelector(String label) {
-  final int index = label == 'Unidad de la cantidad total' ? 0 : 1;
+Finder unitSelector(int index) {
   return find.byType(SegmentedButton<MeasureUnit>).at(index);
 }
 
@@ -241,11 +240,117 @@ void main() {
 
     expect(find.text('Ingresa producto'), findsOneWidget);
     expect(find.text('Ingresa cantidad total'), findsOneWidget);
-    expect(find.text('Ingresa cantidad de unidades'), findsOneWidget);
-    expect(find.text('Ingresa cantidad por unidad'), findsOneWidget);
     expect(find.text('Ingresa departamento'), findsOneWidget);
     expect(find.text('Ingresa municipio'), findsOneWidget);
     expect(find.text('Ingresa dirección'), findsOneWidget);
+    expect(repository.createCalls, 0);
+  });
+
+  testWidgets('renders the optional extra specification box', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SupplyRequestFormPage(
+          repository: FakeSupplyRequestRepository(),
+        ),
+      ),
+    );
+
+    expect(find.text('Especificación extra'), findsOneWidget);
+  });
+
+  testWidgets('empty extra specification submits zero values', (
+    WidgetTester tester,
+  ) async {
+    final FakeSupplyRequestRepository repository =
+        FakeSupplyRequestRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(home: SupplyRequestFormPage(repository: repository)),
+    );
+    await tester.enterText(fieldWithLabel('Producto'), 'Café');
+    await tester.enterText(fieldWithLabel('Cantidad total'), '800');
+    await tester.enterText(fieldWithLabel('Departamento'), 'Managua');
+    await tester.enterText(fieldWithLabel('Municipio'), 'Managua');
+    await tester.enterText(fieldWithLabel('Dirección'), 'Bodega 12');
+    await tester.ensureVisible(find.text('Publicar solicitud'));
+    await tester.tap(find.text('Publicar solicitud'));
+    await tester.pumpAndSettle();
+
+    expect(repository.createCalls, 1);
+    expect(repository.lastDraft!.numberOfUnits, 0);
+    expect(repository.lastDraft!.amountPerUnit, 0);
+  });
+
+  testWidgets('extra specification submits typed values and packing unit', (
+    WidgetTester tester,
+  ) async {
+    final FakeSupplyRequestRepository repository =
+        FakeSupplyRequestRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(home: SupplyRequestFormPage(repository: repository)),
+    );
+    await tester.enterText(fieldWithLabel('Producto'), 'Café');
+    await tester.enterText(fieldWithLabel('Cantidad total'), '800');
+    await tester.enterText(
+      fieldWithLabel('Cantidad de unidades de presentación'),
+      '100',
+    );
+    await tester.enterText(fieldWithLabel('Producto por presentación'), '50');
+    await tester.enterText(fieldWithLabel('Departamento'), 'Managua');
+    await tester.enterText(fieldWithLabel('Municipio'), 'Managua');
+    await tester.enterText(fieldWithLabel('Dirección'), 'Bodega 12');
+    await tester.ensureVisible(unitSelector(1));
+    await tester.tap(
+      find.descendant(of: unitSelector(1), matching: find.text('lb')),
+    );
+    await tester.ensureVisible(find.text('Publicar solicitud'));
+    await tester.tap(find.text('Publicar solicitud'));
+    await tester.pumpAndSettle();
+
+    expect(repository.createCalls, 1);
+    expect(repository.lastDraft!.numberOfUnits, 100);
+    expect(repository.lastDraft!.amountPerUnit, 50);
+    expect(repository.lastDraft!.unitOfMeasure, MeasureUnit.pound);
+  });
+
+  testWidgets('invalid extra specification values block submission', (
+    WidgetTester tester,
+  ) async {
+    final FakeSupplyRequestRepository repository =
+        FakeSupplyRequestRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(home: SupplyRequestFormPage(repository: repository)),
+    );
+    await tester.enterText(fieldWithLabel('Producto'), 'Café');
+    await tester.enterText(fieldWithLabel('Cantidad total'), '800');
+    await tester.enterText(
+      fieldWithLabel('Cantidad de unidades de presentación'),
+      'abc',
+    );
+    await tester.enterText(fieldWithLabel('Producto por presentación'), '50');
+    await tester.enterText(fieldWithLabel('Departamento'), 'Managua');
+    await tester.enterText(fieldWithLabel('Municipio'), 'Managua');
+    await tester.enterText(fieldWithLabel('Dirección'), 'Bodega 12');
+    await tester.ensureVisible(find.text('Publicar solicitud'));
+    await tester.tap(find.text('Publicar solicitud'));
+    await tester.pump();
+
+    expect(find.text('Ingresa una cantidad mayor a cero'), findsOneWidget);
+    expect(repository.createCalls, 0);
+
+    await tester.enterText(
+      fieldWithLabel('Cantidad de unidades de presentación'),
+      '-5',
+    );
+    await tester.ensureVisible(find.text('Publicar solicitud'));
+    await tester.tap(find.text('Publicar solicitud'));
+    await tester.pump();
+
+    expect(find.text('Ingresa una cantidad mayor a cero'), findsOneWidget);
     expect(repository.createCalls, 0);
   });
 
@@ -260,23 +365,20 @@ void main() {
     );
     await tester.enterText(fieldWithLabel('Producto'), 'Café');
     await tester.enterText(fieldWithLabel('Cantidad total'), '800');
-    await tester.enterText(fieldWithLabel('Cantidad de unidades'), '100');
-    await tester.enterText(fieldWithLabel('Cantidad por unidad'), '50');
+    await tester.enterText(
+      fieldWithLabel('Cantidad de unidades de presentación'),
+      '100',
+    );
+    await tester.enterText(fieldWithLabel('Producto por presentación'), '50');
     await tester.enterText(fieldWithLabel('Departamento'), 'Managua');
     await tester.enterText(fieldWithLabel('Municipio'), 'Managua');
     await tester.enterText(fieldWithLabel('Dirección'), 'Bodega 12');
-    await tester.ensureVisible(find.text('Unidad de la cantidad total'));
+    await tester.ensureVisible(unitSelector(0));
     await tester.tap(
-      find.descendant(
-        of: unitSelector('Unidad de la cantidad total'),
-        matching: find.text('lb'),
-      ),
+      find.descendant(of: unitSelector(0), matching: find.text('lb')),
     );
     await tester.tap(
-      find.descendant(
-        of: unitSelector('Unidad de cada unidad de entrega'),
-        matching: find.text('lb'),
-      ),
+      find.descendant(of: unitSelector(1), matching: find.text('lb')),
     );
     await tester.ensureVisible(find.text('Publicar solicitud'));
     await tester.tap(find.text('Publicar solicitud'));
@@ -306,24 +408,21 @@ void main() {
     );
     await tester.enterText(fieldWithLabel('Producto'), 'Café');
     await tester.enterText(fieldWithLabel('Cantidad total'), '500');
-    await tester.enterText(fieldWithLabel('Cantidad de unidades'), '100');
-    await tester.enterText(fieldWithLabel('Cantidad por unidad'), '50');
+    await tester.enterText(
+      fieldWithLabel('Cantidad de unidades de presentación'),
+      '100',
+    );
+    await tester.enterText(fieldWithLabel('Producto por presentación'), '50');
     await tester.enterText(fieldWithLabel('Departamento'), 'Managua');
     await tester.enterText(fieldWithLabel('Municipio'), 'Managua');
     await tester.enterText(fieldWithLabel('Dirección'), 'Bodega 12');
-    await tester.ensureVisible(unitSelector('Unidad de la cantidad total'));
+    await tester.ensureVisible(unitSelector(0));
     await tester.tap(
-      find.descendant(
-        of: unitSelector('Unidad de la cantidad total'),
-        matching: find.text('lb'),
-      ),
+      find.descendant(of: unitSelector(0), matching: find.text('lb')),
     );
-    await tester.ensureVisible(unitSelector('Unidad de cada unidad de entrega'));
+    await tester.ensureVisible(unitSelector(1));
     await tester.tap(
-      find.descendant(
-        of: unitSelector('Unidad de cada unidad de entrega'),
-        matching: find.text('ton'),
-      ),
+      find.descendant(of: unitSelector(1), matching: find.text('ton')),
     );
     await tester.ensureVisible(find.text('Publicar solicitud'));
     await tester.tap(find.text('Publicar solicitud'));
@@ -467,8 +566,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(fieldWithLabel('Producto'), 'Café');
     await tester.enterText(fieldWithLabel('Cantidad total'), '800');
-    await tester.enterText(fieldWithLabel('Cantidad de unidades'), '100');
-    await tester.enterText(fieldWithLabel('Cantidad por unidad'), '50');
+    await tester.enterText(
+      fieldWithLabel('Cantidad de unidades de presentación'),
+      '100',
+    );
+    await tester.enterText(fieldWithLabel('Producto por presentación'), '50');
     await tester.enterText(fieldWithLabel('Departamento'), 'Managua');
     await tester.enterText(fieldWithLabel('Municipio'), 'Managua');
     await tester.enterText(fieldWithLabel('Dirección'), 'Bodega 12');
@@ -496,8 +598,11 @@ void main() {
     );
     await tester.enterText(fieldWithLabel('Producto'), 'Café');
     await tester.enterText(fieldWithLabel('Cantidad total'), '800');
-    await tester.enterText(fieldWithLabel('Cantidad de unidades'), '100');
-    await tester.enterText(fieldWithLabel('Cantidad por unidad'), '50');
+    await tester.enterText(
+      fieldWithLabel('Cantidad de unidades de presentación'),
+      '100',
+    );
+    await tester.enterText(fieldWithLabel('Producto por presentación'), '50');
     await tester.enterText(fieldWithLabel('Departamento'), 'Managua');
     await tester.enterText(fieldWithLabel('Municipio'), 'Managua');
     await tester.enterText(fieldWithLabel('Dirección'), 'Bodega 12');
