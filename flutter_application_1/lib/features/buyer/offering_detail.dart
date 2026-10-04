@@ -7,6 +7,7 @@ import 'package:flutter_application_1/features/buyer/catalog_models.dart';
 import 'package:flutter_application_1/features/buyer/chat.dart';
 import 'package:flutter_application_1/features/buyer/conversation_models.dart';
 import 'package:flutter_application_1/features/buyer/conversation_repository.dart';
+import 'package:flutter_application_1/features/buyer/farmer_map.dart';
 import 'package:flutter_application_1/features/buyer/offering_models.dart';
 import 'package:flutter_application_1/features/buyer/offering_repository.dart';
 import 'package:flutter_application_1/features/buyer/report_dialog.dart';
@@ -158,6 +159,15 @@ class _OfferingDetailPageState extends State<OfferingDetailPage> {
     seller.municipality,
     seller.department,
   ].where((String value) => value.isNotEmpty).join(', ');
+
+  bool get _hasCoordinates {
+    final OfferingDetail? detail = _detail;
+    if (detail == null) return false;
+    final double? latitude = detail.latitude;
+    final double? longitude = detail.longitude;
+    if (latitude == null || longitude == null) return false;
+    return latitude != 0 && longitude != 0;
+  }
 
   IconData _starIcon(double average, int index) {
     if (average >= index + 1) return Icons.star;
@@ -352,6 +362,24 @@ class _OfferingDetailPageState extends State<OfferingDetailPage> {
               ),
             ],
           ),
+          const SizedBox(height: AppSpacing.xl),
+          Text('Ubicación del agricultor', style: AppText.sectionTitle),
+          const SizedBox(height: AppSpacing.sm),
+          if (_hasCoordinates) ...[
+            FarmerMap(
+              latitude: detail.latitude!,
+              longitude: detail.longitude!,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Arrastrá el mapa y hacé zoom para ubicar la finca.',
+              style: AppText.caption,
+            ),
+          ] else
+            Text(
+              'El agricultor no compartió su ubicación.',
+              style: AppText.caption,
+            ),
           const SizedBox(height: AppSpacing.xl),
         ],
       ),
