@@ -38,7 +38,7 @@
 
 ## Tareas
 
-- [ ] **F1 — Dirección y ubicación (cliente, 1 commit).** `LocationReporter` inyectable (implementación con `geolocator`, fake en tests); campo "Dirección" en el registro; interruptor "Compartir mi ubicación" (opcional, arranca apagado) que pide permiso y captura las coordenadas; reporte de `address`, `latitude` y `longitude` en el registro y en la edición de perfil; permisos de Android e iOS.
+- [x] **F1 — Dirección y ubicación (cliente, 1 commit).** `LocationReporter` inyectable (implementación con `geolocator`, fake en tests); campo "Dirección" en el registro; interruptor "Compartir mi ubicación" (opcional, arranca apagado) que pide permiso y captura las coordenadas; reporte de `address`, `latitude` y `longitude` en el registro y en la edición de perfil; permisos de Android e iOS.
 - [ ] **F2 — Inicio real (cliente, 1 commit).**
 - [ ] **F3 — Foto de perfil (server + cliente).**
 
@@ -51,3 +51,6 @@
 ## Progreso
 
 - 2026-10-04: feature abierta. Diagnóstico verificado en código (cliente y server) y plan de 3 fases aprobado por el usuario, con la decisión de capturar la ubicación por GPS del dispositivo (opción A) y reportarla sin mostrarla en la UI.
+- 2026-10-04: **F1 completada** — commit `42ab87d`, rama `feat/buyer-identity`. `lib/core/location_reporter.dart` (nuevo): `LocationReporter.capture()` con la implementación `DeviceLocationReporter` sobre `geolocator` (chequeo de servicio y permiso, posición con límite de 20 s, `null` ante cualquier fallo). El registro suma el campo "Dirección" y el interruptor "Compartir mi ubicación" (arranca apagado: si el usuario no lo enciende, el reportero no se llama y no se manda nada); la edición de perfil suma el mismo interruptor para que una cuenta existente pueda reportar su ubicación. `address`, `latitude` y `longitude` viajan en `POST /auth/register` y en `PATCH /users/{id}`; las coordenadas no se muestran en ningún lado de la UI. Permisos en `AndroidManifest.xml` e `Info.plist`. Evidencia: `flutter analyze` limpio, 169 tests verdes (3 nuevos: la dirección escrita llega al payload, sin consentimiento no se envía nada, con consentimiento se envían las coordenadas capturadas). **Verificada en el teléfono** (2026-10-04): alta nueva con la dirección escrita y el interruptor de ubicación encendido, permiso aceptado por el usuario, resultado OK.
+- **Revisión nativa de F1: diferida por decisión del usuario** (candidato `42ab87d`): primero la prueba en el teléfono; si el e2e revela algo, el candidato cambia igual y se revisa después. El preflight (`inspect`) ofreció `review.start` sobre el único cambio sin commitear, que era esta misma línea de progreso: se salteó por la excepción de edición trivial sólo-documentación. RDD sigue encendido y no se creó ni quemó ninguna autoridad.
+- **Nota para F2:** el "inicio real" necesita las coordenadas del comprador para `sort=proximity`, y por decisión del usuario el cliente **no** las lee del server; el camino natural es reutilizar `LocationReporter`. Por eso F2 se apila sobre la rama de F1.
