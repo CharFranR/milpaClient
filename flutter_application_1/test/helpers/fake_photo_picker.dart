@@ -5,10 +5,17 @@ class FakePhotoPicker implements PhotoPicker {
 
   final PickedPhoto? result;
   int calls = 0;
+  int cameraCalls = 0;
 
   @override
   Future<PickedPhoto?> pick() async {
     calls++;
+    return result;
+  }
+
+  @override
+  Future<PickedPhoto?> pickFromCamera() async {
+    cameraCalls++;
     return result;
   }
 }

@@ -9,16 +9,23 @@ class PickedPhoto {
 
 abstract class PhotoPicker {
   Future<PickedPhoto?> pick();
+
+  Future<PickedPhoto?> pickFromCamera();
 }
 
 class DevicePhotoPicker implements PhotoPicker {
   const DevicePhotoPicker();
 
   @override
-  Future<PickedPhoto?> pick() async {
+  Future<PickedPhoto?> pick() => _take(ImageSource.gallery);
+
+  @override
+  Future<PickedPhoto?> pickFromCamera() => _take(ImageSource.camera);
+
+  Future<PickedPhoto?> _take(ImageSource source) async {
     try {
       final XFile? file = await ImagePicker().pickImage(
-        source: ImageSource.gallery,
+        source: source,
         maxWidth: 1200,
         imageQuality: 85,
       );

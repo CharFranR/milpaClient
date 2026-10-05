@@ -85,7 +85,9 @@ class _OfferFormPageState extends State<OfferFormPage> {
     final DateTime? date = widget.offer?.deliveryDate;
     if (date == null) return 7;
     final DateTime today = DateUtils.dateOnly(DateTime.now());
-    final int days = DateUtils.dateOnly(date.toLocal()).difference(today).inDays;
+    final int days = DateUtils.dateOnly(date.toLocal())
+        .difference(today)
+        .inDays;
     return days < 1 ? 1 : days;
   }
 
@@ -125,9 +127,7 @@ class _OfferFormPageState extends State<OfferFormPage> {
       totalAmount: _parseNumber(_amountController.text),
       pricePerUnit: _parseNumber(_priceController.text),
       measurement: _unit,
-      deliveryDay: DateUtils.dateOnly(
-        DateTime.now(),
-      ).add(Duration(days: days)),
+      deliveryDay: DateUtils.dateOnly(DateTime.now()).add(Duration(days: days)),
       comments: _commentController.text,
     );
 
@@ -316,14 +316,18 @@ class _OfferFormPageState extends State<OfferFormPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const Text(
+          '¿En cuántos días lo podés entregar?',
+          style: AppText.fieldLabel,
+        ),
+        const SizedBox(height: 6),
         Row(
           children: [
             for (final int days in <int>[3, 7, 15]) ...[
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => setState(
-                    () => _daysController.text = days.toString(),
-                  ),
+                  onPressed: () =>
+                      setState(() => _daysController.text = days.toString()),
                   style: OutlinedButton.styleFrom(
                     backgroundColor: selected == days
                         ? AppColors.whiteGreen.withValues(alpha: 0.22)
@@ -352,10 +356,10 @@ class _OfferFormPageState extends State<OfferFormPage> {
             ],
           ],
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
         LabeledField(
-          label: '¿En cuántos días lo podés entregar?',
-          hint: 'Ej. 7',
+          label: 'Otro plazo',
+          hint: 'Ej. 10',
           controller: _daysController,
           keyboardType: TextInputType.number,
           textInputAction: TextInputAction.done,

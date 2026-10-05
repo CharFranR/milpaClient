@@ -381,18 +381,42 @@ class _ProductFormPageState extends State<ProductFormPage> {
             ),
           const SizedBox(height: AppSpacing.sm),
           OutlinedButton.icon(
-            onPressed: _uploadingPhoto ? null : _pickPhoto,
+            onPressed: _uploadingPhoto
+                ? null
+                : () => _pickPhoto(fromCamera: true),
+            icon: const Icon(Icons.photo_camera_outlined),
+            label: Text(photo == null ? 'Sacar una foto' : 'Sacar otra foto'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          OutlinedButton.icon(
+            onPressed: _uploadingPhoto
+                ? null
+                : () => _pickPhoto(fromCamera: false),
             icon: const Icon(Icons.photo_library_outlined),
-            label: Text(photo == null ? 'Elegir una foto' : 'Cambiar la foto'),
+            label: Text(
+              photo == null
+                  ? 'Elegir de la galería'
+                  : 'Elegir otra de la galería',
+            ),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _pickPhoto() async {
-    final PickedPhoto? photo = await widget.photoPicker.pick();
-    if (photo == null || !mounted) return;
+  Future<void> _pickPhoto({required bool fromCamera}) async {
+    final PickedPhoto? photo = fromCamera
+        ? await widget.photoPicker.pickFromCamera()
+        : await widget.photoPicker.pick();
+    if (!mounted) return;
+    if (photo == null) {
+      if (fromCamera) {
+        _showMessage(
+          'No pudimos abrir la cámara. Probá de nuevo o elegí una foto de tu galería.',
+        );
+      }
+      return;
+    }
     setState(() => _photo = photo);
   }
 
