@@ -38,7 +38,7 @@ class FarmerMap extends StatelessWidget {
           children: [
             TileLayer(
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.example.flutter_application_1',
+              userAgentPackageName: 'com.guirilas.milpa',
               maxZoom: 19,
             ),
             MarkerLayer(
