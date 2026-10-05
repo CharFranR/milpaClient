@@ -3,6 +3,7 @@ import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/core/api_exception.dart';
 import 'package:flutter_application_1/core/token_store.dart';
 import 'package:flutter_application_1/features/buyer/catalog_models.dart';
+import 'package:flutter_application_1/features/buyer/supply_request_models.dart';
 import 'package:flutter_application_1/features/farmer/offer_form.dart';
 import 'package:flutter_application_1/features/farmer/order_models.dart';
 import 'package:flutter_application_1/features/farmer/order_repository.dart';
@@ -31,6 +32,7 @@ class _FarmerOrdersPageState extends State<FarmerOrdersPage> {
   Object? _requestsError;
 
   List<MyOffer> _offers = <MyOffer>[];
+  Map<String, SupplyRequest> _offerRequests = <String, SupplyRequest>{};
   bool _offersLoading = true;
   Object? _offersError;
 
@@ -70,9 +72,13 @@ class _FarmerOrdersPageState extends State<FarmerOrdersPage> {
     });
     try {
       final List<MyOffer> offers = await _repository.fetchMyOffers();
+      final Map<String, SupplyRequest> requests = await _loadOfferRequests(
+        offers,
+      );
       if (!mounted) return;
       setState(() {
         _offers = offers;
+        _offerRequests = requests;
         _offersLoading = false;
         _offersError = null;
       });
@@ -83,6 +89,22 @@ class _FarmerOrdersPageState extends State<FarmerOrdersPage> {
         _offersError = error;
       });
     }
+  }
+
+  Future<Map<String, SupplyRequest>> _loadOfferRequests(
+    List<MyOffer> offers,
+  ) async {
+    final Map<String, SupplyRequest> requests = <String, SupplyRequest>{};
+    for (final MyOffer offer in offers) {
+      final String requestId = offer.supplyRequestId;
+      if (requestId.isEmpty || requests.containsKey(requestId)) continue;
+      try {
+        requests[requestId] = await _repository.fetchRequestById(requestId);
+      } catch (_) {
+        continue;
+      }
+    }
+    return requests;
   }
 
   Future<void> _openOfferForm(AvailableRequest request) async {
@@ -344,7 +366,14 @@ class _FarmerOrdersPageState extends State<FarmerOrdersPage> {
   }
 
   Widget _offerCard(MyOffer offer) {
-    final String unit = offer.measurement.label;
+    final SupplyRequest? request = _offerRequests[offer.supplyRequestId];
+    final String productName =
+        request != null && request.productName.isNotEmpty
+        ? request.productName
+        : offer.productName;
+    final String unit = request != null
+        ? request.amountUnit.label
+        : offer.measurement.label;
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -357,9 +386,7 @@ class _FarmerOrdersPageState extends State<FarmerOrdersPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            offer.productName.isEmpty
-                ? 'Pedido de un comprador'
-                : offer.productName,
+            productName.isEmpty ? 'Pedido de un comprador' : productName,
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,

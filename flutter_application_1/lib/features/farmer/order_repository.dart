@@ -1,6 +1,7 @@
 import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/core/api_exception.dart';
 import 'package:flutter_application_1/core/token_store.dart';
+import 'package:flutter_application_1/features/buyer/supply_request_models.dart';
 import 'package:flutter_application_1/features/farmer/order_models.dart';
 
 class OrderRepository {
@@ -37,6 +38,12 @@ class OrderRepository {
     final String token = await _readTokenOrThrow();
     final dynamic json = await _api.get('/supply-offers/', token: token);
     return _listItems(json).map(MyOffer.fromJson).toList();
+  }
+
+  Future<SupplyRequest> fetchRequestById(String id) async {
+    final String token = await _readTokenOrThrow();
+    final dynamic json = await _api.get('/supply-requests/$id', token: token);
+    return SupplyRequest.fromJson(json as Map<String, dynamic>);
   }
 
   Future<void> updateOffer(String id, OfferDraft draft) async {

@@ -1,10 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/core/models/auth_models.dart';
 import 'package:flutter_application_1/features/auth/session_controller.dart';
+import 'package:flutter_application_1/features/buyer/offering_models.dart';
+import 'package:flutter_application_1/features/buyer/offering_repository.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
-class FarmerAccountPage extends StatelessWidget {
-  const FarmerAccountPage({super.key});
+class FarmerAccountPage extends StatefulWidget {
+  const FarmerAccountPage({super.key, this.offeringRepository});
+
+  final OfferingRepository? offeringRepository;
+
+  @override
+  State<FarmerAccountPage> createState() => _FarmerAccountPageState();
+}
+
+class _FarmerAccountPageState extends State<FarmerAccountPage> {
+  late final OfferingRepository _repository =
+      widget.offeringRepository ?? OfferingRepository(apiClient: ApiClient());
+
+  String _userId = '';
+  RatingSummary? _rating;
+  bool _loadingRating = true;
+  bool _ratingFailed = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final String userId = SessionScope.of(context).user?.id ?? '';
+    if (userId.isNotEmpty && userId != _userId) {
+      _userId = userId;
+      _loadRating();
+    }
+  }
+
+  Future<void> _loadRating() async {
+    setState(() {
+      _loadingRating = true;
+      _ratingFailed = false;
+    });
+    try {
+      final RatingSummary rating = await _repository.fetchRating(_userId);
+      if (!mounted) return;
+      setState(() {
+        _rating = rating;
+        _loadingRating = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _ratingFailed = true;
+        _loadingRating = false;
+      });
+    }
+  }
 
   Future<void> _signOut(BuildContext context) async {
     final NavigatorState navigator = Navigator.of(context);
@@ -38,7 +87,13 @@ class FarmerAccountPage extends StatelessWidget {
               textAlign: TextAlign.center,
               style: AppText.headline,
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.lg),
+            _ReputationCard(
+              summary: _rating,
+              loading: _loadingRating,
+              failed: _ratingFailed,
+            ),
+            const SizedBox(height: AppSpacing.lg),
             _InfoCard(
               rows: [
                 _RowData(title: 'Nombre completo', value: _fullName(user)),
@@ -96,6 +151,104 @@ class FarmerAccountPage extends StatelessWidget {
     if (user.addressLine.isNotEmpty) return user.addressLine;
     if (location.isNotEmpty) return location;
     return '—';
+  }
+}
+
+class _ReputationCard extends StatelessWidget {
+  const _ReputationCard({
+    required this.summary,
+    required this.loading,
+    required this.failed,
+  });
+
+  final RatingSummary? summary;
+  final bool loading;
+  final bool failed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppTints.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Lo que dicen los compradores', style: AppText.sectionTitle),
+          const SizedBox(height: AppSpacing.md),
+          _buildContent(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    if (loading) {
+      return const Row(
+        children: [
+          SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(strokeWidth: 2.5),
+          ),
+          SizedBox(width: AppSpacing.md),
+          Flexible(
+            child: Text(
+              'Estamos buscando tus calificaciones...',
+              style: TextStyle(fontSize: 17, color: AppColors.dark),
+            ),
+          ),
+        ],
+      );
+    }
+    if (failed) {
+      return const Text(
+        'No pudimos cargar tu calificación. Probá más tarde.',
+        style: TextStyle(fontSize: 17, color: AppColors.dark),
+      );
+    }
+    final RatingSummary? rating = summary;
+    if (rating == null || !rating.hasReviews) {
+      return const Text(
+        'Todavía no tenés calificaciones. Cuando cierres tus primeros '
+        'tratos, acá vas a ver lo que dicen los compradores.',
+        style: TextStyle(fontSize: 17, color: AppColors.dark),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Tu calificación: ${rating.average.toStringAsFixed(1)} '
+          '(${rating.count})',
+          style: const TextStyle(
+            fontSize: 21,
+            fontWeight: FontWeight.w700,
+            color: AppColors.dark,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: List<Widget>.generate(
+            5,
+            (int index) => Icon(
+              _starIcon(rating.average, index),
+              size: 34,
+              color: AppColors.yelow,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  IconData _starIcon(double average, int index) {
+    if (average >= index + 1) return Icons.star;
+    if (average >= index + 0.5) return Icons.star_half;
+    return Icons.star_border;
   }
 }
 

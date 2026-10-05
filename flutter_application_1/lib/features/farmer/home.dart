@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/features/auth/session_controller.dart';
+import 'package:flutter_application_1/features/farmer/lots.dart';
+import 'package:flutter_application_1/features/farmer/sales.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
 class FarmerHome extends StatelessWidget {
@@ -49,10 +51,30 @@ class FarmerHome extends StatelessWidget {
             onTap: onProducts,
           ),
           _HomeCard(
+            icon: Icons.inventory_outlined,
+            title: 'Mis lotes',
+            description: 'Publicá tu lote completo con descuento.',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const FarmerLotsPage(),
+              ),
+            ),
+          ),
+          _HomeCard(
             icon: Icons.receipt_long_outlined,
             title: 'Pedidos',
             description: 'Mirá los pedidos de los compradores.',
             onTap: onOrders,
+          ),
+          _HomeCard(
+            icon: Icons.handshake_outlined,
+            title: 'Mis ventas',
+            description: 'Seguí los tratos que ya cerraste.',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const FarmerSalesPage(),
+              ),
+            ),
           ),
           _HomeCard(
             icon: Icons.chat_bubble_outline,
