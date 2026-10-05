@@ -4,10 +4,8 @@ import 'package:flutter_application_1/core/token_store.dart';
 import 'package:flutter_application_1/features/farmer/product_models.dart';
 
 class CatalogRepository {
-  CatalogRepository({
-    required ApiClient apiClient,
-    required this._tokenStore,
-  }) : _api = apiClient;
+  CatalogRepository({required ApiClient apiClient, required this._tokenStore})
+    : _api = apiClient;
 
   final ApiClient _api;
   final TokenStore _tokenStore;
@@ -54,6 +52,30 @@ class CatalogRepository {
       },
       token: token,
     );
+  }
+
+  Future<String> uploadImage({
+    required String filePath,
+    required String filename,
+  }) async {
+    final String token = await _readTokenOrThrow();
+    final dynamic json = await _api.postMultipart(
+      '/images/',
+      field: 'image',
+      filePath: filePath,
+      filename: filename,
+      token: token,
+    );
+    final String path = json is Map<String, dynamic>
+        ? (json['path'] as String? ?? '')
+        : '';
+    if (path.isEmpty) {
+      throw const ApiException(
+        500,
+        'No pudimos subir la foto. Probá de nuevo.',
+      );
+    }
+    return path;
   }
 
   Future<String> _readTokenOrThrow() async {

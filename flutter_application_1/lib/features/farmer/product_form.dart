@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/core/api_exception.dart';
+import 'package:flutter_application_1/core/photo_picker.dart';
 import 'package:flutter_application_1/core/token_store.dart';
 import 'package:flutter_application_1/features/farmer/catalog_repository.dart';
 import 'package:flutter_application_1/features/farmer/product_models.dart';
@@ -8,10 +11,16 @@ import 'package:flutter_application_1/ui/app_tokens.dart';
 import 'package:flutter_application_1/ui/labeled_field.dart';
 
 class ProductFormPage extends StatefulWidget {
-  const ProductFormPage({super.key, required this.userId, this.repository});
+  const ProductFormPage({
+    super.key,
+    required this.userId,
+    this.repository,
+    this.photoPicker = const DevicePhotoPicker(),
+  });
 
   final String userId;
   final CatalogRepository? repository;
+  final PhotoPicker photoPicker;
 
   @override
   State<ProductFormPage> createState() => _ProductFormPageState();
@@ -29,9 +38,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
   final TextEditingController _quantityController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
-  DateTime _expiresAt = DateUtils.dateOnly(
-    DateTime.now(),
-  ).add(const Duration(days: 30));
+  DateTime _expiresAt = DateUtils.dateOnly(DateTime.now())
+      .add(const Duration(days: 30));
 
   List<FarmerCategory> _categories = <FarmerCategory>[];
   bool _categoriesLoading = true;
@@ -39,6 +47,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
   String _categoryId = '';
   bool _categoryMissing = false;
   bool _isSaving = false;
+  bool _uploadingPhoto = false;
+  PickedPhoto? _photo;
 
   @override
   void initState() {
@@ -128,19 +138,32 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
     FocusScope.of(context).unfocus();
     setState(() => _isSaving = true);
-    final ProductDraft draft = ProductDraft(
-      userId: widget.userId,
-      name: _nameController.text.trim(),
-      variety: 'General',
-      unitOfMeasureId: category.defaultUnitOfMeasureId,
-      quantityAvailable: _parseNumber(_quantityController.text),
-      categoryId: category.id,
-      description: _descriptionController.text.trim(),
-      price: _parseNumber(_priceController.text),
-      expiresAt: _expiresAt,
-    );
 
     try {
+      String? imageUrl;
+      final PickedPhoto? photo = _photo;
+      if (photo != null) {
+        setState(() => _uploadingPhoto = true);
+        imageUrl = await _repository.uploadImage(
+          filePath: photo.path,
+          filename: photo.filename,
+        );
+        if (mounted) setState(() => _uploadingPhoto = false);
+      }
+
+      final ProductDraft draft = ProductDraft(
+        userId: widget.userId,
+        name: _nameController.text.trim(),
+        variety: 'General',
+        unitOfMeasureId: category.defaultUnitOfMeasureId,
+        quantityAvailable: _parseNumber(_quantityController.text),
+        categoryId: category.id,
+        description: _descriptionController.text.trim(),
+        price: _parseNumber(_priceController.text),
+        expiresAt: _expiresAt,
+        imageUrl: imageUrl,
+      );
+
       await _repository.publish(draft);
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -148,7 +171,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
       if (!mounted) return;
       _showMessage(_publishErrorMessage(error));
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+          _uploadingPhoto = false;
+        });
+      }
     }
   }
 
@@ -207,10 +235,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'Categoría',
-                        style: AppText.fieldLabel,
-                      ),
+                      _photoStep(),
+                      const SizedBox(height: AppSpacing.lg),
+                      const Text('Categoría', style: AppText.fieldLabel),
                       const SizedBox(height: 6),
                       _categoryPicker(),
                       if (_categoryMissing) ...[
@@ -231,8 +258,10 @@ class _ProductFormPageState extends State<ProductFormPage> {
                         controller: _nameController,
                         keyboardType: TextInputType.name,
                         textInputAction: TextInputAction.next,
-                        validator: (String? value) =>
-                            _required(value, 'Escribí el nombre de tu producto'),
+                        validator: (String? value) => _required(
+                          value,
+                          'Escribí el nombre de tu producto',
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       LabeledField(
@@ -295,7 +324,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
                           ),
                         )
                       : const Icon(Icons.check_circle_outline, size: 28),
-                  label: Text(_isSaving ? 'Publicando…' : 'Publicar'),
+                  label: Text(
+                    _uploadingPhoto
+                        ? 'Subiendo la foto…'
+                        : (_isSaving ? 'Publicando…' : 'Publicar'),
+                  ),
                 ),
               ),
             ),
@@ -303,6 +336,64 @@ class _ProductFormPageState extends State<ProductFormPage> {
         ),
       ),
     );
+  }
+
+  Widget _photoStep() {
+    final PickedPhoto? photo = _photo;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.dark.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('Foto del producto', style: AppText.fieldLabel),
+          const SizedBox(height: AppSpacing.sm),
+          if (photo == null)
+            Row(
+              children: [
+                const Icon(
+                  Icons.photo_camera_outlined,
+                  size: 36,
+                  color: AppColors.blackGreen,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    'Mostrá cómo se ve lo que vendés. Con foto te compran más.',
+                    style: AppText.bodySecondary,
+                  ),
+                ),
+              ],
+            )
+          else
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(
+                File(photo.path),
+                height: 180,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+          const SizedBox(height: AppSpacing.sm),
+          OutlinedButton.icon(
+            onPressed: _uploadingPhoto ? null : _pickPhoto,
+            icon: const Icon(Icons.photo_library_outlined),
+            label: Text(photo == null ? 'Elegir una foto' : 'Cambiar la foto'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickPhoto() async {
+    final PickedPhoto? photo = await widget.photoPicker.pick();
+    if (photo == null || !mounted) return;
+    setState(() => _photo = photo);
   }
 
   Widget _categoryPicker() {
@@ -386,10 +477,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
         tilePadding: EdgeInsets.zero,
         iconColor: AppColors.blackGreen,
         collapsedIconColor: AppColors.blackGreen,
-        title: const Text(
-          'Más datos (opcional)',
-          style: AppText.sectionTitle,
-        ),
+        title: const Text('Más datos (opcional)', style: AppText.sectionTitle),
         childrenPadding: const EdgeInsets.only(bottom: AppSpacing.sm),
         children: [
           Row(
