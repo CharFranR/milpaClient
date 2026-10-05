@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/features/buyer/explore.dart';
 import 'package:flutter_application_1/features/buyer/home.dart';
+import 'package:flutter_application_1/features/buyer/liquidations.dart';
 import 'package:flutter_application_1/features/buyer/messages.dart';
 import 'package:flutter_application_1/features/buyer/profile.dart';
+import 'package:flutter_application_1/features/buyer/supply_request_form.dart';
 import 'package:flutter_application_1/features/buyer/supply_requests.dart';
 import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
-/// Contenedor del comprador: páginas con barra inferior y FAB central.
+/// Contenedor del comprador: páginas con barra inferior.
 class BuyerLayout extends StatefulWidget {
   const BuyerLayout({super.key});
 
@@ -30,6 +32,57 @@ class _BuyerLayoutState extends State<BuyerLayout> {
 
   void _select(int index) => setState(() => _currentIndex = index);
 
+  Future<void> _openMayoristaMenu() async {
+    Widget? destination;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: AppSpacing.sm),
+            ListTile(
+              leading: const Icon(Icons.post_add, color: AppColors.blackGreen),
+              title: const Text('Nueva solicitud', style: AppText.label),
+              onTap: () {
+                destination = const SupplyRequestFormPage();
+                Navigator.of(sheetContext).pop();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.list_alt, color: AppColors.blackGreen),
+              title: const Text('Mis solicitudes', style: AppText.label),
+              onTap: () {
+                destination = const SupplyRequestsPage();
+                Navigator.of(sheetContext).pop();
+              },
+            ),
+            ListTile(
+              leading: const Icon(
+                Icons.inventory_2_outlined,
+                color: AppColors.blackGreen,
+              ),
+              title: const Text('Lotes disponibles', style: AppText.label),
+              onTap: () {
+                destination = const LiquidationsPage();
+                Navigator.of(sheetContext).pop();
+              },
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || destination == null) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => destination!),
+    );
+  }
+
   Widget _page(int index) {
     return switch (index) {
       0 => BuyerHome(onExplore: () => _select(1)),
@@ -46,24 +99,18 @@ class _BuyerLayoutState extends State<BuyerLayout> {
       body: _page(_currentIndex),
       floatingActionButton:
           canPublishSupplyRequests(SessionScope.of(context).user?.role)
-          ? FloatingActionButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const SupplyRequestsPage(),
-                ),
-              ),
+          ? FloatingActionButton.extended(
+              onPressed: _openMayoristaMenu,
               backgroundColor: AppColors.blackGreen,
               foregroundColor: Colors.white,
-              shape: const CircleBorder(),
               elevation: 2,
-              child: const Icon(Icons.add, size: 28),
+              icon: const Icon(Icons.storefront, size: 22),
+              label: const Text('Mayorista', style: AppText.button),
             )
           : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: BottomAppBar(
         color: Colors.white,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 6,
         height: 66,
         padding: EdgeInsets.zero,
         child: Row(
@@ -82,7 +129,6 @@ class _BuyerLayoutState extends State<BuyerLayout> {
               current: _currentIndex,
               onTap: _select,
             ),
-            const SizedBox(width: 72),
             _NavItem(
               icon: Icons.mail_outline,
               label: 'Mensajes',

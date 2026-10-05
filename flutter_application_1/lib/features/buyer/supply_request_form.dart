@@ -1,17 +1,28 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/core/api_exception.dart';
+import 'package:flutter_application_1/core/location_reporter.dart';
+import 'package:flutter_application_1/core/models/auth_models.dart';
 import 'package:flutter_application_1/core/token_store.dart';
+import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_models.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_repository.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 import 'package:flutter_application_1/ui/labeled_field.dart';
 
 class SupplyRequestFormPage extends StatefulWidget {
-  const SupplyRequestFormPage({super.key, this.request, this.repository});
+  const SupplyRequestFormPage({
+    super.key,
+    this.request,
+    this.repository,
+    this.locationReporter = const DeviceLocationReporter(),
+  });
 
   final SupplyRequest? request;
   final SupplyRequestRepository? repository;
+  final LocationReporter locationReporter;
 
   @override
   State<SupplyRequestFormPage> createState() => _SupplyRequestFormPageState();
@@ -41,6 +52,9 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
   late bool _multipleProviders;
   bool _isSaving = false;
   String? _dateError;
+  Future<Coordinates?>? _pendingCoordinates;
+  Coordinates? _coordinates;
+  bool _locationResolved = false;
 
   bool get _isEditing => widget.request != null;
 
@@ -71,6 +85,61 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
     _deliveryDeadline =
         draft.deliveryDeadline ?? today.add(const Duration(days: 60));
     _multipleProviders = draft.multipleProviders;
+    if (!_isEditing) {
+      _preloadBuyerData();
+      _startLocationCapture();
+    }
+  }
+
+  void _preloadBuyerData() {
+    final SessionController? session = context
+        .getInheritedWidgetOfExactType<SessionScope>()
+        ?.notifier;
+    final User? user = session?.user;
+    if (user == null) return;
+    _fillIfEmpty(_departmentController, user.department);
+    _fillIfEmpty(_municipalityController, user.municipality);
+    _fillIfEmpty(_addressController, user.addressLine);
+  }
+
+  void _fillIfEmpty(TextEditingController controller, String value) {
+    if (controller.text.trim().isEmpty && value.trim().isNotEmpty) {
+      controller.text = value;
+    }
+  }
+
+  void _startLocationCapture() {
+    final Future<Coordinates?> pending = widget.locationReporter
+        .captureGranted();
+    final Future<Coordinates?> safe = pending.then<Coordinates?>(
+      (Coordinates? coordinates) => coordinates,
+      onError: (Object _) => null,
+    );
+    _pendingCoordinates = safe;
+    unawaited(
+      safe.then((Coordinates? coordinates) {
+        if (!mounted) return;
+        setState(() {
+          _coordinates = coordinates;
+          _locationResolved = true;
+        });
+      }),
+    );
+  }
+
+  Future<Coordinates?> _resolveCoordinates() async {
+    if (_isEditing) return null;
+    final Future<Coordinates?>? pending = _pendingCoordinates;
+    if (pending == null) return _coordinates;
+    try {
+      final Coordinates? coordinates = await pending.timeout(
+        const Duration(seconds: 5),
+      );
+      _coordinates = coordinates;
+      return coordinates;
+    } catch (_) {
+      return _coordinates;
+    }
   }
 
   SupplyRequestDraft _defaultDraft() {
@@ -177,6 +246,8 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
 
     FocusScope.of(context).unfocus();
     setState(() => _isSaving = true);
+    final Coordinates? coordinates = await _resolveCoordinates();
+    if (!mounted) return;
     final SupplyRequestDraft draft = SupplyRequestDraft(
       productName: _productController.text.trim(),
       description: _descriptionController.text.trim(),
@@ -189,8 +260,8 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
       department: _departmentController.text.trim(),
       municipality: _municipalityController.text.trim(),
       addressLine: _addressController.text.trim(),
-      latitude: widget.request?.latitude ?? 0,
-      longitude: widget.request?.longitude ?? 0,
+      latitude: widget.request?.latitude ?? coordinates?.latitude ?? 0,
+      longitude: widget.request?.longitude ?? coordinates?.longitude ?? 0,
       requestDeadline: _requestDeadline,
       deliveryDeadline: _deliveryDeadline,
       multipleProviders: _multipleProviders,
@@ -368,6 +439,13 @@ class _SupplyRequestFormPageState extends State<SupplyRequestFormPage> {
                   textInputAction: TextInputAction.next,
                   validator: (String? value) => _required(value, 'dirección'),
                 ),
+                if (!_isEditing && _locationResolved && _coordinates == null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'No pudimos usar tu ubicación. Activala en tu perfil para ordenar las ofertas por cercanía.',
+                    style: AppText.caption,
+                  ),
+                ],
                 const SizedBox(height: AppSpacing.lg),
                 _dateRow(
                   label: 'Fecha límite',

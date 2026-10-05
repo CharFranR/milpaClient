@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/core/api_exception.dart';
 import 'package:flutter_application_1/core/models/auth_models.dart';
+import 'package:flutter_application_1/core/token_store.dart';
+import 'package:flutter_application_1/features/auth/session_controller.dart';
+import 'package:flutter_application_1/features/buyer/match_models.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_form.dart';
 import 'package:flutter_application_1/features/buyer/supply_request_models.dart';
 import 'package:flutter_application_1/features/buyer/supply_requests.dart';
+import 'package:flutter_application_1/features/buyer/transaction_page.dart';
+import 'package:flutter_application_1/features/buyer/transaction_repository.dart';
 import 'package:flutter_application_1/main.dart';
 import 'package:flutter_application_1/ui/labeled_field.dart';
 
@@ -12,8 +18,52 @@ import '../../helpers/fake_auth_repository.dart';
 import '../../helpers/fake_supply_request_repository.dart';
 import '../../helpers/fake_user_repository.dart';
 
-Widget wrap(FakeSupplyRequestRepository repository) {
-  return MaterialApp(home: SupplyRequestsPage(repository: repository));
+class FakeTransactionRepository extends TransactionRepository {
+  FakeTransactionRepository({List<Transaction>? transactions})
+    : transactions = List<Transaction>.of(transactions ?? <Transaction>[]),
+      super(apiClient: ApiClient(), tokenStore: TokenStore());
+
+  final List<Transaction> transactions;
+  Object? fetchByRequestError;
+  int fetchByRequestCalls = 0;
+  String? lastRequestId;
+
+  @override
+  Future<List<Transaction>> fetchByRequest(String requestId) async {
+    fetchByRequestCalls++;
+    lastRequestId = requestId;
+    if (fetchByRequestError != null) throw fetchByRequestError!;
+    return List<Transaction>.of(transactions);
+  }
+}
+
+Transaction buildTransaction({
+  String id = 'tx-1',
+  String matchId = 'match-1',
+  TransactionStatus status = TransactionStatus.matched,
+}) => Transaction(
+  id: id,
+  matchId: matchId,
+  status: status,
+  createdAt: '2026-10-04T07:42:02Z',
+);
+
+Widget wrap(
+  FakeSupplyRequestRepository repository, {
+  FakeTransactionRepository? transactions,
+}) {
+  return SessionScope(
+    controller: SessionController(
+      authRepository: FakeAuthRepository(),
+      userRepository: FakeUserRepository(),
+    ),
+    child: MaterialApp(
+      home: SupplyRequestsPage(
+        repository: repository,
+        transactionRepository: transactions,
+      ),
+    ),
+  );
 }
 
 Finder fieldWithLabel(String label) {
@@ -205,6 +255,114 @@ void main() {
 
     expect(find.text('Editar'), findsNothing);
     expect(find.text('Cancelar'), findsNothing);
+    expect(find.text('Ver transacción'), findsOneWidget);
+  });
+
+  testWidgets('open requests have no transaction action', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      wrap(
+        FakeSupplyRequestRepository(
+          requests: <SupplyRequest>[
+            buildSupplyRequest(status: SupplyRequestStatus.open),
+          ],
+        ),
+      ),
+    );
+    await loadPage(tester);
+
+    expect(find.text('Ver transacción'), findsNothing);
+  });
+
+  testWidgets('Ver transacción avisa cuando no hay transacciones', (
+    WidgetTester tester,
+  ) async {
+    final FakeTransactionRepository transactions = FakeTransactionRepository();
+
+    await tester.pumpWidget(
+      wrap(
+        FakeSupplyRequestRepository(
+          requests: <SupplyRequest>[
+            buildSupplyRequest(id: 'done', status: SupplyRequestStatus.completed),
+          ],
+        ),
+        transactions: transactions,
+      ),
+    );
+    await loadPage(tester);
+    await tester.tap(find.text('Ver transacción'));
+    await loadPage(tester);
+
+    expect(transactions.fetchByRequestCalls, 1);
+    expect(transactions.lastRequestId, 'done');
+    expect(
+      find.text('Todavía no hay transacciones para esta solicitud'),
+      findsOneWidget,
+    );
+    expect(find.byType(TransactionPage), findsNothing);
+  });
+
+  testWidgets('Ver transacción abre la transacción cuando hay una sola', (
+    WidgetTester tester,
+  ) async {
+    final FakeTransactionRepository transactions = FakeTransactionRepository(
+      transactions: <Transaction>[buildTransaction()],
+    );
+
+    await tester.pumpWidget(
+      wrap(
+        FakeSupplyRequestRepository(
+          requests: <SupplyRequest>[
+            buildSupplyRequest(id: 'done', status: SupplyRequestStatus.completed),
+          ],
+        ),
+        transactions: transactions,
+      ),
+    );
+    await loadPage(tester);
+    await tester.ensureVisible(find.text('Ver transacción'));
+    await tester.tap(find.text('Ver transacción'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(transactions.fetchByRequestCalls, 1);
+    expect(find.byType(TransactionPage), findsOneWidget);
+  });
+
+  testWidgets('Ver transacción lista las varias en un bottom sheet', (
+    WidgetTester tester,
+  ) async {
+    final FakeTransactionRepository transactions = FakeTransactionRepository(
+      transactions: <Transaction>[
+        buildTransaction(id: 'tx-1', matchId: 'match-1'),
+        buildTransaction(
+          id: 'tx-2',
+          matchId: 'match-2',
+          status: TransactionStatus.inProgress,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      wrap(
+        FakeSupplyRequestRepository(
+          requests: <SupplyRequest>[
+            buildSupplyRequest(id: 'done', status: SupplyRequestStatus.completed),
+          ],
+        ),
+        transactions: transactions,
+      ),
+    );
+    await loadPage(tester);
+    await tester.ensureVisible(find.text('Ver transacción'));
+    await tester.tap(find.text('Ver transacción'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Elegí una transacción'), findsOneWidget);
+    expect(find.text('Acordada'), findsOneWidget);
+    expect(find.text('En proceso'), findsOneWidget);
+    expect(find.text('04/10/2026'), findsNWidgets(2));
   });
 
   testWidgets('new request opens the form and returning true reloads', (

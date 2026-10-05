@@ -9,6 +9,8 @@ class OfferingDetail {
     required this.description,
     required this.price,
     required this.imageUrl,
+    this.latitude,
+    this.longitude,
   });
 
   factory OfferingDetail.fromJson(Map<String, dynamic> json) => OfferingDetail(
@@ -19,6 +21,8 @@ class OfferingDetail {
     description: json['description'] as String? ?? '',
     price: (json['price'] as num?)?.toDouble() ?? 0,
     imageUrl: json['image_url'] as String? ?? '',
+    latitude: (json['latitude'] as num?)?.toDouble(),
+    longitude: (json['longitude'] as num?)?.toDouble(),
   );
 
   final String id;
@@ -28,6 +32,8 @@ class OfferingDetail {
   final String description;
   final double price;
   final String imageUrl;
+  final double? latitude;
+  final double? longitude;
 
   String? get imageSrc => resolveImageSrc(imageUrl);
 }

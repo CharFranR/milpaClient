@@ -6,12 +6,15 @@ import 'package:flutter_application_1/main.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers/fake_auth_repository.dart';
+import '../../helpers/fake_user_repository.dart';
 
 Future<void> pumpMainApp(WidgetTester tester, FakeAuthRepository fake) async {
   tester.platformDispatcher.textScaleFactorTestValue = 0.8;
   addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-  await tester.pumpWidget(MainApp(authRepository: fake));
+  await tester.pumpWidget(
+    MainApp(authRepository: fake, userRepository: FakeUserRepository()),
+  );
   await tester.pumpAndSettle();
 }
 

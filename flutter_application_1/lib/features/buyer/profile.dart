@@ -4,6 +4,7 @@ import 'package:flutter_application_1/core/models/auth_models.dart';
 import 'package:flutter_application_1/core/photo_picker.dart';
 import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/features/buyer/edit_profile.dart';
+import 'package:flutter_application_1/features/buyer/liquidations.dart';
 import 'package:flutter_application_1/features/buyer/supply_requests.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
@@ -141,6 +142,14 @@ class _BuyerProfileState extends State<BuyerProfile> {
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => const SupplyRequestsPage(),
+                    ),
+                  ),
+                ),
+                _ProfileRowData(
+                  title: 'Lotes disponibles',
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const LiquidationsPage(),
                     ),
                   ),
                 ),
