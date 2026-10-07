@@ -16,6 +16,7 @@ class FarmerProduct {
     required this.categoryId,
     this.createdAt,
     this.updatedAt,
+    this.expiresAt,
   });
 
   factory FarmerProduct.fromJson(Map<String, dynamic> json) => FarmerProduct(
@@ -33,6 +34,7 @@ class FarmerProduct {
     categoryId: json['category_id'] as String? ?? '',
     createdAt: json['created_at'] as String?,
     updatedAt: json['updated_at'] as String?,
+    expiresAt: DateTime.tryParse(json['expires_at'] as String? ?? ''),
   );
 
   final String id;
@@ -49,8 +51,16 @@ class FarmerProduct {
   final String categoryId;
   final String? createdAt;
   final String? updatedAt;
+  final DateTime? expiresAt;
 
   String? get imageSrc => resolveImageSrc(imageUrl);
+
+  bool get isExpired {
+    final DateTime? expiresAt = this.expiresAt;
+    return expiresAt != null && !expiresAt.isAfter(DateTime.now());
+  }
+
+  bool get isHidden => !isActive || isExpired;
 }
 
 class FarmerCategory {

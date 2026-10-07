@@ -11,9 +11,11 @@ class CatalogRepository {
   final TokenStore _tokenStore;
 
   Future<List<FarmerProduct>> fetchMine(String userId) async {
+    final String token = await _readTokenOrThrow();
     final dynamic json = await _api.get(
       '/offerings/',
-      query: <String, String>{'user_id': userId},
+      query: <String, String>{'user_id': userId, 'include_hidden': 'true'},
+      token: token,
     );
     return _listItems(json)
         .map((Map<String, dynamic> item) => FarmerProduct.fromJson(item))
