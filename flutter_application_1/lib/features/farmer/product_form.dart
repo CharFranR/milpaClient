@@ -78,6 +78,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
         _categories = categories;
         _categoriesLoading = false;
         _categoriesError = null;
+        final FarmerCategory? selected = _selectedCategory;
+        if (selected != null) {
+          final DateTime? prefilled = _expiryForCategory(selected);
+          if (prefilled != null) _expiresAt = prefilled;
+        }
       });
     } catch (error) {
       if (!mounted) return;
@@ -93,6 +98,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
       if (category.id == _categoryId) return category;
     }
     return null;
+  }
+
+  DateTime? _expiryForCategory(FarmerCategory category) {
+    final int? days = category.defaultExpiryDays;
+    if (days == null || days <= 0) return null;
+    return DateUtils.dateOnly(DateTime.now()).add(Duration(days: days));
   }
 
   double _parseNumber(String value) {
@@ -472,6 +483,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
       onSelected: (_) => setState(() {
         _categoryId = category.id;
         _categoryMissing = false;
+        final DateTime? prefilled = _expiryForCategory(category);
+        if (prefilled != null) _expiresAt = prefilled;
       }),
       labelStyle: TextStyle(
         fontSize: 17,

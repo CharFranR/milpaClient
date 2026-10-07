@@ -68,17 +68,20 @@ class FarmerCategory {
     required this.id,
     required this.name,
     required this.defaultUnitOfMeasureId,
+    this.defaultExpiryDays,
   });
 
   factory FarmerCategory.fromJson(Map<String, dynamic> json) => FarmerCategory(
     id: json['id'] as String? ?? '',
     name: json['name'] as String? ?? '',
     defaultUnitOfMeasureId: json['default_unit_of_measure_id'] as String? ?? '',
+    defaultExpiryDays: (json['default_expiry_days'] as num?)?.toInt(),
   );
 
   final String id;
   final String name;
   final String defaultUnitOfMeasureId;
+  final int? defaultExpiryDays;
 }
 
 class ProductDraft {
