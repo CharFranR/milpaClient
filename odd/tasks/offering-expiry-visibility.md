@@ -41,7 +41,7 @@
 
 ## Verificación
 
-- E1: `go build ./...` + `go vet ./...` limpios; `go test -count=1 ./tests/unitary/usecases/... ./tests/unitary/entities/...` verde (baseline conocido; `go test ./...` sigue rojo por deudas X1: integración `postgres_test.go` y `tests/unitary/dto`).
+- E1: `go build ./...` + `go vet ./...` limpios; `go test -count=1 ./tests/unitary/usecases/... ./tests/unitary/entities/...` verde. En la corrida de esta máquina la suite completa (`go test ./...`) también quedó verde: la integración usa testcontainers y las deudas X1 no se reprodujeron.
 - E2: idem + prueba manual contra el server local con dos cuentas (dueño ve ocultas; tercero recibe 403).
 - E3: `flutter analyze` limpio + `flutter test` con la suite existente verde; prueba manual en el teléfono queda del usuario.
 - Sin reindex de ES: la consistencia es "doc borrado al ocultar / re-indexado al renovar".
