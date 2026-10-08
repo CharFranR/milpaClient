@@ -9,6 +9,7 @@ class OfferingDetail {
     required this.description,
     required this.price,
     required this.imageUrl,
+    this.companyId,
     this.latitude,
     this.longitude,
   });
@@ -21,12 +22,20 @@ class OfferingDetail {
     description: json['description'] as String? ?? '',
     price: (json['price'] as num?)?.toDouble() ?? 0,
     imageUrl: json['image_url'] as String? ?? '',
+    companyId: _parseCompanyId(json['company_id']),
     latitude: (json['latitude'] as num?)?.toDouble(),
     longitude: (json['longitude'] as num?)?.toDouble(),
   );
 
+  static String? _parseCompanyId(dynamic value) {
+    if (value is! String || value.isEmpty) return null;
+    if (value == '00000000-0000-0000-0000-000000000000') return null;
+    return value;
+  }
+
   final String id;
   final String userId;
+  final String? companyId;
   final int type;
   final String name;
   final String description;
