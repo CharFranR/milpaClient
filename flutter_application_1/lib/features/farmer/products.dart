@@ -197,6 +197,13 @@ class _FarmerProductsPageState extends State<FarmerProductsPage> {
       );
     }
 
+    final List<FarmerProduct> visible = _products
+        .where((FarmerProduct product) => !product.isHidden)
+        .toList();
+    final List<FarmerProduct> hidden = _products
+        .where((FarmerProduct product) => product.isHidden)
+        .toList();
+
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -207,7 +214,15 @@ class _FarmerProductsPageState extends State<FarmerProductsPage> {
           AppSpacing.lg,
           AppSpacing.lg,
         ),
-        children: _products.map(_productCard).toList(),
+        children: [
+          ...visible.map(_productCard),
+          if (hidden.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            const Text('Ocultos', style: AppText.sectionTitle),
+            const SizedBox(height: AppSpacing.sm),
+            ...hidden.map(_productCard),
+          ],
+        ],
       ),
     );
   }
@@ -308,7 +323,7 @@ class _FarmerProductsPageState extends State<FarmerProductsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _StatusBadge(isActive: product.isActive),
+                    _StatusBadge(product: product),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       product.name,
@@ -340,7 +355,7 @@ class _FarmerProductsPageState extends State<FarmerProductsPage> {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
             children: [
-              if (product.isActive)
+              if (!product.isHidden)
                 OutlinedButton.icon(
                   onPressed: () => _confirmDeactivate(product),
                   style: _cardActionStyle,
@@ -408,16 +423,23 @@ class _FarmerProductsPageState extends State<FarmerProductsPage> {
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.isActive});
+  const _StatusBadge({required this.product});
 
-  final bool isActive;
+  final FarmerProduct product;
 
   @override
   Widget build(BuildContext context) {
-    final Color background = isActive
+    final bool expired = product.isExpired;
+    final bool active = product.isActive && !expired;
+    final Color background = active
         ? AppColors.whiteGreen.withValues(alpha: 0.22)
         : AppColors.dark.withValues(alpha: 0.08);
-    final Color foreground = isActive ? AppColors.blackGreen : AppTints.secondary;
+    final Color foreground = active ? AppColors.blackGreen : AppTints.secondary;
+    final String label = expired
+        ? 'Vencido'
+        : product.isActive
+        ? 'Activo'
+        : 'Inactivo';
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -428,7 +450,7 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Text(
-        isActive ? 'Activo' : 'Inactivo',
+        label,
         style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w700,
