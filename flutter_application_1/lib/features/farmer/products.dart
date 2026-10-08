@@ -5,15 +5,23 @@ import 'package:flutter_application_1/core/token_store.dart';
 import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/features/buyer/catalog_models.dart';
 import 'package:flutter_application_1/features/buyer/widgets/product_image.dart';
+import 'package:flutter_application_1/features/company/company_models.dart';
+import 'package:flutter_application_1/features/company/company_repository.dart';
+import 'package:flutter_application_1/features/farmer/business.dart';
 import 'package:flutter_application_1/features/farmer/catalog_repository.dart';
 import 'package:flutter_application_1/features/farmer/product_form.dart';
 import 'package:flutter_application_1/features/farmer/product_models.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
 class FarmerProductsPage extends StatefulWidget {
-  const FarmerProductsPage({super.key, this.repository});
+  const FarmerProductsPage({
+    super.key,
+    this.repository,
+    this.companyRepository,
+  });
 
   final CatalogRepository? repository;
+  final CompanyRepository? companyRepository;
 
   @override
   State<FarmerProductsPage> createState() => _FarmerProductsPageState();
@@ -24,8 +32,13 @@ class _FarmerProductsPageState extends State<FarmerProductsPage> {
       widget.repository ??
       CatalogRepository(apiClient: ApiClient(), tokenStore: TokenStore());
 
+  late final CompanyRepository _companyRepository =
+      widget.companyRepository ??
+      CompanyRepository(apiClient: ApiClient(), tokenStore: TokenStore());
+
   String _userId = '';
   List<FarmerProduct> _products = <FarmerProduct>[];
+  String? _companyId;
   bool _loading = true;
   Object? _error;
 
@@ -47,9 +60,11 @@ class _FarmerProductsPageState extends State<FarmerProductsPage> {
     });
     try {
       final List<FarmerProduct> products = await _repository.fetchMine(_userId);
+      final String? companyId = await _loadCompanyId();
       if (!mounted) return;
       setState(() {
         _products = products;
+        _companyId = companyId;
         _loading = false;
         _error = null;
       });
@@ -62,12 +77,26 @@ class _FarmerProductsPageState extends State<FarmerProductsPage> {
     }
   }
 
+  Future<String?> _loadCompanyId() async {
+    try {
+      final List<Company> companies = await _companyRepository.fetchByOwner(
+        _userId,
+      );
+      if (companies.isEmpty) return null;
+      final String id = companies.first.id;
+      return id.isEmpty ? null : id;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _openForm() async {
     final bool? published = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => ProductFormPage(
           userId: _userId,
           repository: _repository,
+          companyId: _companyId,
         ),
       ),
     );
@@ -75,6 +104,18 @@ class _FarmerProductsPageState extends State<FarmerProductsPage> {
     await _load();
     if (!mounted) return;
     _showMessage('Ya está publicado. Los compradores lo pueden ver.');
+  }
+
+  Future<void> _openBusiness() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => FarmerBusinessPage(
+          companyRepository: widget.companyRepository,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await _load();
   }
 
   Future<void> _confirmDeactivate(FarmerProduct product) async {
@@ -170,6 +211,8 @@ class _FarmerProductsPageState extends State<FarmerProductsPage> {
           ),
           child: Text('Mis productos', style: AppText.screenTitle),
         ),
+        if (!_loading && _error == null && _companyId == null)
+          _companyBanner(),
         Expanded(child: _content()),
         _publishButton(),
       ],
@@ -223,6 +266,79 @@ class _FarmerProductsPageState extends State<FarmerProductsPage> {
             ...hidden.map(_productCard),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _companyBanner() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.sm,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.whiteGreen.withValues(alpha: 0.45),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.whiteGreen.withValues(alpha: 0.18),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.storefront_outlined,
+                      size: 26,
+                      color: AppColors.blackGreen,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                const Expanded(
+                  child: Text('Sumá tu empresa', style: AppText.headline),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            const Text(
+              'Creá el perfil de tu empresa para obtener la insignia de '
+              'Proveedor Verificado y más visibilidad en el Marketplace.',
+              style: AppText.body,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            FilledButton.icon(
+              onPressed: _openBusiness,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.blackGreen,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(0, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              icon: const Icon(Icons.add_business_outlined, size: 24),
+              label: const Text('Ir a Mi negocio'),
+            ),
+          ],
+        ),
       ),
     );
   }

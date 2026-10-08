@@ -96,6 +96,7 @@ class ProductDraft {
     required this.price,
     required this.expiresAt,
     this.imageUrl,
+    this.companyId,
   });
 
   final String userId;
@@ -108,6 +109,7 @@ class ProductDraft {
   final double price;
   final DateTime expiresAt;
   final String? imageUrl;
+  final String? companyId;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'user_id': userId,
@@ -119,6 +121,7 @@ class ProductDraft {
     'category_id': categoryId,
     if (description.trim().isNotEmpty) 'description': description.trim(),
     if ((imageUrl ?? '').isNotEmpty) 'image_url': imageUrl,
+    if ((companyId ?? '').isNotEmpty) 'company_id': companyId,
     'price': price,
     'expires_at': expiresAt.toUtc().toIso8601String(),
   };

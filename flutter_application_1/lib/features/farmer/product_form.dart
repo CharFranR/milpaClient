@@ -16,11 +16,13 @@ class ProductFormPage extends StatefulWidget {
     required this.userId,
     this.repository,
     this.photoPicker = const DevicePhotoPicker(),
+    this.companyId,
   });
 
   final String userId;
   final CatalogRepository? repository;
   final PhotoPicker photoPicker;
+  final String? companyId;
 
   @override
   State<ProductFormPage> createState() => _ProductFormPageState();
@@ -173,6 +175,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
         price: _parseNumber(_priceController.text),
         expiresAt: _expiresAt,
         imageUrl: imageUrl,
+        companyId: widget.companyId,
       );
 
       await _repository.publish(draft);
