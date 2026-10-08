@@ -5,6 +5,7 @@ import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/core/api_exception.dart';
 import 'package:flutter_application_1/core/photo_picker.dart';
 import 'package:flutter_application_1/core/token_store.dart';
+import 'package:flutter_application_1/features/buyer/edit_profile.dart';
 import 'package:flutter_application_1/features/farmer/catalog_repository.dart';
 import 'package:flutter_application_1/features/farmer/product_models.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
@@ -183,7 +184,21 @@ class _ProductFormPageState extends State<ProductFormPage> {
       Navigator.of(context).pop(true);
     } catch (error) {
       if (!mounted) return;
-      _showMessage(_publishErrorMessage(error));
+      if (_isAddressError(error)) {
+        _showMessage(
+          _publishErrorMessage(error),
+          action: SnackBarAction(
+            label: 'Completar dirección',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const EditProfilePage(),
+              ),
+            ),
+          ),
+        );
+      } else {
+        _showMessage(_publishErrorMessage(error));
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -192,6 +207,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
         });
       }
     }
+  }
+
+  bool _isAddressError(Object error) {
+    return error is ApiException &&
+        error.statusCode == 400 &&
+        error.message.toLowerCase().contains('address');
   }
 
   String _publishErrorMessage(Object error) {
@@ -208,10 +229,10 @@ class _ProductFormPageState extends State<ProductFormPage> {
     return 'No pudimos publicar. Probá de nuevo.';
   }
 
-  void _showMessage(String text) {
+  void _showMessage(String text, {SnackBarAction? action}) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(text)));
+      ..showSnackBar(SnackBar(content: Text(text), action: action));
   }
 
   String _formatDate(DateTime date) {
