@@ -3,7 +3,7 @@ class ApiConfig {
 
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8080/api/v1',
+    defaultValue: 'http://158.158.36.211:8080/api/v1',
   );
 
   static Uri webSocketUri(String conversationId) =>
