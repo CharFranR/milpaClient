@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/api_client.dart';
 import 'package:flutter_application_1/core/models/auth_models.dart';
 import 'package:flutter_application_1/features/auth/session_controller.dart';
+import 'package:flutter_application_1/features/buyer/edit_profile.dart';
 import 'package:flutter_application_1/features/buyer/offering_models.dart';
 import 'package:flutter_application_1/features/buyer/offering_repository.dart';
 import 'package:flutter_application_1/features/company/company_repository.dart';
@@ -121,6 +122,14 @@ class _FarmerAccountPageState extends State<FarmerAccountPage> {
                 ),
               ),
             ),
+            const SizedBox(height: AppSpacing.lg),
+            _EditProfileCard(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const EditProfilePage(),
+                ),
+              ),
+            ),
             const SizedBox(height: AppSpacing.xxl),
             SizedBox(
               height: 58,
@@ -168,6 +177,57 @@ class _FarmerAccountPageState extends State<FarmerAccountPage> {
     if (user.addressLine.isNotEmpty) return user.addressLine;
     if (location.isNotEmpty) return location;
     return '—';
+  }
+}
+
+class _EditProfileCard extends StatelessWidget {
+  const _EditProfileCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        side: BorderSide(color: AppTints.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.edit_outlined,
+                size: 28,
+                color: AppColors.blackGreen,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Editar perfil', style: AppText.sectionTitle),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Actualizá tus datos y tu dirección',
+                      style: AppText.bodySecondary,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.blackGreen),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
