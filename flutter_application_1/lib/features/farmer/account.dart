@@ -4,12 +4,19 @@ import 'package:flutter_application_1/core/models/auth_models.dart';
 import 'package:flutter_application_1/features/auth/session_controller.dart';
 import 'package:flutter_application_1/features/buyer/offering_models.dart';
 import 'package:flutter_application_1/features/buyer/offering_repository.dart';
+import 'package:flutter_application_1/features/company/company_repository.dart';
+import 'package:flutter_application_1/features/farmer/business.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
 class FarmerAccountPage extends StatefulWidget {
-  const FarmerAccountPage({super.key, this.offeringRepository});
+  const FarmerAccountPage({
+    super.key,
+    this.offeringRepository,
+    this.companyRepository,
+  });
 
   final OfferingRepository? offeringRepository;
+  final CompanyRepository? companyRepository;
 
   @override
   State<FarmerAccountPage> createState() => _FarmerAccountPageState();
@@ -103,6 +110,16 @@ class _FarmerAccountPageState extends State<FarmerAccountPage> {
                 ),
                 _RowData(title: 'Dirección', value: _address(user)),
               ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            _BusinessCard(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => FarmerBusinessPage(
+                    companyRepository: widget.companyRepository,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: AppSpacing.xxl),
             SizedBox(
@@ -321,6 +338,52 @@ class _InfoCard extends StatelessWidget {
         border: Border.all(color: AppTints.border),
       ),
       child: Column(children: children),
+    );
+  }
+}
+
+class _BusinessCard extends StatelessWidget {
+  const _BusinessCard({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppTints.border),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.storefront_outlined,
+                size: 30,
+                color: AppColors.blackGreen,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Mi negocio', style: AppText.headline),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text('Tu perfil de empresa', style: AppText.bodySecondary),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, size: 26, color: AppTints.hint),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

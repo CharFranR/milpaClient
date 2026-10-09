@@ -13,6 +13,8 @@ import 'package:flutter_application_1/features/buyer/offering_repository.dart';
 import 'package:flutter_application_1/features/buyer/report_dialog.dart';
 import 'package:flutter_application_1/features/buyer/report_repository.dart';
 import 'package:flutter_application_1/features/buyer/widgets/product_image.dart';
+import 'package:flutter_application_1/features/company/company_models.dart';
+import 'package:flutter_application_1/features/company/company_repository.dart';
 import 'package:flutter_application_1/ui/app_tokens.dart';
 
 class OfferingDetailPage extends StatefulWidget {
@@ -22,12 +24,14 @@ class OfferingDetailPage extends StatefulWidget {
     this.offeringRepository,
     this.conversationRepository,
     this.reportRepository,
+    this.companyRepository,
   });
 
   final String offeringId;
   final OfferingRepository? offeringRepository;
   final ConversationRepository? conversationRepository;
   final ReportRepository? reportRepository;
+  final CompanyRepository? companyRepository;
 
   @override
   State<OfferingDetailPage> createState() => _OfferingDetailPageState();
@@ -39,10 +43,14 @@ class _OfferingDetailPageState extends State<OfferingDetailPage> {
   late final ConversationRepository _conversationRepository =
       widget.conversationRepository ??
       ConversationRepository(apiClient: ApiClient(), tokenStore: TokenStore());
+  late final CompanyRepository _companyRepository =
+      widget.companyRepository ??
+      CompanyRepository(apiClient: ApiClient(), tokenStore: TokenStore());
 
   OfferingDetail? _detail;
   SellerProfile? _seller;
   RatingSummary? _rating;
+  Company? _company;
   bool _loading = true;
   bool _sending = false;
   String? _error;
@@ -62,11 +70,13 @@ class _OfferingDetailPageState extends State<OfferingDetailPage> {
         _offeringRepository.fetchSeller(detail.userId),
         _offeringRepository.fetchRating(detail.userId),
       ).wait;
+      final Company? company = await _fetchCompany(detail.companyId);
       if (!mounted) return;
       setState(() {
         _detail = detail;
         _seller = seller;
         _rating = rating;
+        _company = company;
         _loading = false;
       });
     } catch (_) {
@@ -75,6 +85,15 @@ class _OfferingDetailPageState extends State<OfferingDetailPage> {
         _loading = false;
         _error = 'No se pudo cargar la oferta';
       });
+    }
+  }
+
+  Future<Company?> _fetchCompany(String? companyId) async {
+    if (companyId == null) return null;
+    try {
+      return await _companyRepository.fetchById(companyId);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -159,6 +178,129 @@ class _OfferingDetailPageState extends State<OfferingDetailPage> {
     seller.municipality,
     seller.department,
   ].where((String value) => value.isNotEmpty).join(', ');
+
+  Widget _sellerCard(SellerProfile seller) {
+    final String location = _location(seller);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.dark.withValues(alpha: 0.06)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Color(0xFFEAF3E6),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                _initial(seller.fullName),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.blackGreen,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(seller.fullName, style: AppText.label),
+                if (location.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(location, style: AppText.caption),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _companyCard(Company company) {
+    final String location = <String>[
+      company.municipality,
+      company.department,
+    ].where((String value) => value.isNotEmpty).join(', ');
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.dark.withValues(alpha: 0.06)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Color(0xFFEAF3E6),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                _initial(company.name),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.blackGreen,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(company.name, style: AppText.label),
+                if (company.verified) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.yelow,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: const Text(
+                      'Proveedor Verificado',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.dark,
+                      ),
+                    ),
+                  ),
+                ],
+                if (location.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(location, style: AppText.caption),
+                ],
+                if (company.description.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(company.description, style: AppText.caption),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   bool get _hasCoordinates {
     final OfferingDetail? detail = _detail;
@@ -249,7 +391,7 @@ class _OfferingDetailPageState extends State<OfferingDetailPage> {
     final OfferingDetail detail = _detail!;
     final SellerProfile seller = _seller!;
     final RatingSummary rating = _rating!;
-    final String location = _location(seller);
+    final Company? company = _company;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
@@ -301,49 +443,10 @@ class _OfferingDetailPageState extends State<OfferingDetailPage> {
             Text(detail.description, style: AppText.bodySecondary),
           ],
           const SizedBox(height: AppSpacing.xl),
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.dark.withValues(alpha: 0.06)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEAF3E6),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      _initial(seller.fullName),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.blackGreen,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(seller.fullName, style: AppText.label),
-                      if (location.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(location, style: AppText.caption),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+          if (company == null)
+            _sellerCard(seller)
+          else
+            _companyCard(company),
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
